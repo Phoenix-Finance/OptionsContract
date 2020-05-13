@@ -9,5 +9,6 @@ contract ICompoundOracle {
   */
     function getPrice(address asset) public view returns (uint);
     function getUnderlyingPrice(ERC20 cToken) public view returns (uint);
+    function getOptionsPrice(ERC20 oToken) public view returns (uint);
 
 }

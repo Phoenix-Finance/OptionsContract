@@ -2,6 +2,7 @@ pragma solidity ^0.4.0;
 import "./Ownable.sol";
 import "./IERC20.sol";
 import "./SafeMath.sol";
+import "./IIterableToken.sol";
 library BalanceMapping
 {
     struct itmap
@@ -112,7 +113,7 @@ contract Expration is Ownable {
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract OptionsToken is Expration, IERC20 {
+contract OptionsToken is Expration, IERC20, IIterableToken {
     using SafeMath for uint256;
     string public constant name = "OptionsToken";
     string public constant symbol = "OptionsToken";
@@ -135,6 +136,22 @@ contract OptionsToken is Expration, IERC20 {
         return _totalSupply;
     }
 
+    function iterate_balance_start() public view returns (uint)
+    {
+        return BalanceMapping.iterate_start(_balances);
+    }
+    function iterate_balance_valid( uint keyIndex)public view returns (bool)
+    {
+        return BalanceMapping.iterate_valid(_balances,keyIndex);
+    }
+    function iterate_balance_next(uint keyIndex)public view returns (uint)
+    {
+        return BalanceMapping.iterate_next(_balances,keyIndex);
+    }
+    function iterate_balance_get(uint keyIndex)public view returns (address, uint256)
+    {
+        return BalanceMapping.iterate_get(_balances,keyIndex);
+    }
     /**
      * @dev See {IERC20-balanceOf}.
      */
