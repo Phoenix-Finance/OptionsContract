@@ -77,7 +77,7 @@ contract OptionsVault
     function _insertWriter( address key, uint256 amount,uint256 mintOptTokenAmount) private returns (bool){
         OptionsWriter[] storage writers = optionsMap[key].writers;
         int index = -1;
-        for (int i=0;i<writers.length;i++){
+        for ( int i=0;i<writers.length;i++ ){
             if (writers[i].writer == msg.sender){
                 index = i;
                 break;
@@ -308,40 +308,46 @@ contract OptionsManager is OptionsModify {
             optionsItem.writers[index].collateralAmount = optionsItem.writers[index].collateralAmount.sub(_transFee);
             managerFee[optionsItem.options.collateralCurrency] = managerFee[optionsItem.options.collateralCurrency].add(_transFee);
             optionsItem.writers[index].OptionsTokenAmount = optionsItem.writers[index].OptionsTokenAmount.sub(amount);
+            //transfer
+            optToken.transfer(msg.sender,_payback);
+            IIterableToken itoken = IIterableToken(optionsToken);
+            itoken.burn(amount);
+        }
+    }
+    function burnOptionsToken(address optionsToken,uint256 amount)public{
+       require(_contains(optionsToken),"This OptionsToken does not exist");
+        IndexValue storage optionsItem = optionsMap[optionsToken];
+        require(!isExpired(optionsItem), "OptionsToken expired");
+        int index = -1;
+        for(int i=0;i<optionsItem.writers.length;i++){
+            if(optionsItem.writers[i].writer == msg.sender){
+                index = i;
+                break;
+            }
+        }
+        if (index != -1) {
+            if( amount > optionsItem.writers[index].OptionsTokenAmount){
+                return;
+            }
+            IERC20 optToken = IERC20(optionsToken);
+            optToken.transferFrom(msg.sender, address(this), amount);
+            optionsItem.writers[index].OptionsTokenAmount = optionsItem.writers[index].OptionsTokenAmount.sub(amount);
+            //burn
+            IIterableToken itoken = IIterableToken(optionsToken);
+            itoken.burn(amount);
 
         }
-        /**
-            struct OptionsInfo{
-        OptionsType	type;
-        //Collateral currency address. If this address equals 0, it means that it is Eth;
-        address		collateralCurrency;
-        //underlying assets type;
-        uint32		underlyingAssets;
-        uint256		expiration;
-        Number      strikePrice;
-        bool        isExercised;
     }
-    // Keeps track of the OptionsWriter Info
-    struct OptionsWriter {
-        //Options wrter address;
-        address		writer;
-        //collateral amount.
-        uint256		collateralAmount;
-        //mint optionsToken amount
-        uint256     OptionsTokenAmount;
-
-    }
-    struct IndexValue
-    {
-        uint keyIndex;
-        OptionsInfo options;
-        OptionsWriter[] writers;
-    }
-        */
-    }
-    function burnOptionsToken()public{
-    }
-    function redeem()public onlyOwner{
+    function redeem(address collateral)public onlyOwner{
+        uint256 fee = managerFee[collateral];
+        require (fee > 0, "It's empty balance");
+        managerFee[collateral] = 0;
+        IERC20 collateralToken = IERC20(collateral);
+        if (isETH(collateralToken)){
+            msg.sender.transfer(fee);
+        }else{
+            collateralToken.transfer(msg.sender,fee);
+        }
     }
 
     function isETH(IERC20 _ierc20) public pure returns (bool) {
@@ -420,7 +426,7 @@ contract OptionsManager is OptionsModify {
                 break;
             }
         }
-        if(index!= -1){
+        if(index != -1){
             allCollateral = writers[index].collateralAmount;
             allMintToken = writers[index].OptionsTokenAmount;
         }
@@ -441,6 +447,10 @@ contract OptionsManager is OptionsModify {
                 optionsMap[OptionsToken].writers[index].collateralAmount = allCollateral;
                 optionsMap[OptionsToken].writers[index].OptionsTokenAmount = allMintToken;
             }
+            //mint
+            IIterableToken itoken = IIterableToken(optionsToken);
+            itoken.mint(msg.sender,amount);
+
         }else{
             return false;
         }

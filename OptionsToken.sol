@@ -89,6 +89,26 @@ contract Expration is Ownable {
         return _expiration;
     }
 }
+contract Managerable is Expration {
+
+    address private _managerAddress;
+
+    modifier onlyManager() {
+        require(_managerAddress == msg.sender);
+        _;
+    }
+    /// @notice function Emergency situation that requires
+    /// @notice contribution period to stop or not.
+    function setExpration(address managerAddress)
+    public
+    onlyOwner
+    {
+        _managerAddress = managerAddress;
+    }
+    function getExpration()public view returns (address) {
+        return _managerAddress;
+    }
+}
 /**
  * @dev Implementation of the {IERC20} interface.
  *
@@ -113,11 +133,12 @@ contract Expration is Ownable {
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract OptionsToken is Expration, IERC20, IIterableToken {
+contract OptionsToken is Managerable, IERC20, IIterableToken {
     using SafeMath for uint256;
     string public constant name = "OptionsToken";
     string public constant symbol = "OptionsToken";
     uint8 public constant decimals = 18;
+    
 
     BalanceMapping.itmap private _balances;
 
@@ -158,7 +179,6 @@ contract OptionsToken is Expration, IERC20, IIterableToken {
     function balanceOf(address account) public view returns (uint256) {
         return _balances[account].value;
     }
-
     /**
      * @dev See {IERC20-transfer}.
      *
@@ -261,6 +281,14 @@ contract OptionsToken is Expration, IERC20, IIterableToken {
         return true;
     }
 
+    function burn(uint256 amount) public notExpired onlyManager returns (bool){
+        _burn(msg.sender, amount);
+        return true;
+    }
+    function mint(address account,uint256 amount) public notExpired onlyManager returns (bool){
+        _mint(account,amount);
+        return true;
+    }
     /**
      * @dev add `recipient`'s balance to iterable mapping balances.
      */
