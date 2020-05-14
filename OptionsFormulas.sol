@@ -84,22 +84,22 @@ contract OptionsFormulas is Ownable{
     //*****************************setter**********************************
 
     //****************************Call Formulas***************************
-    function setCallLowerDemarcation(int256 _value,int32 _exponent)public onlyowner{
+    function setCallLowerDemarcation(int256 _value,int32 _exponent)public onlyOwner{
         callCollateral.lowerDemarcation.value = _value;
-        callCollateral.lowerDemarcation.exponent - _exponent;
+        callCollateral.lowerDemarcation.exponent = _exponent;
     }
-    function setCallUpperDemarcation(int256 _value,int32 _exponent)public onlyowner{
+    function setCallUpperDemarcation(int256 _value,int32 _exponent)public onlyOwner{
         callCollateral.upperDemarcation.value = _value;
-        callCollateral.upperDemarcation.exponent - _exponent;
+        callCollateral.upperDemarcation.exponent = _exponent;
     }
-    function setCallLowerLimit(int256 _value,int32 _exponent)public onlyowner{
+    function setCallLowerLimit(int256 _value,int32 _exponent)public onlyOwner{
         callCollateral.lowerLimit.value = _value;
-        callCollateral.lowerLimit.exponent - _exponent;
+        callCollateral.lowerLimit.exponent = _exponent;
     }
     function setCallLowerSegment(int256 _strikeSlopeValue,
                                 int32 _strickSlopeExponent,
                                 int256 _priceSlopeValue,
-                                int32 _priceSlopeExponent)public onlyowner
+                                int32 _priceSlopeExponent)public onlyOwner
     {
         callCollateral.lowerSegment.strikeSlope.value = _strikeSlopeValue;
         callCollateral.lowerSegment.strikeSlope.exponent = _strickSlopeExponent;
@@ -109,7 +109,7 @@ contract OptionsFormulas is Ownable{
     function getCallMidSegment(int256 _strikeSlopeValue,
         int32 _strickSlopeExponent,
         int256 _priceSlopeValue,
-        int32 _priceSlopeExponent)public onlyowner
+        int32 _priceSlopeExponent)public onlyOwner
     {
         callCollateral.midSegment.strikeSlope.value = _strikeSlopeValue;
         callCollateral.midSegment.strikeSlope.exponent = _strickSlopeExponent;
@@ -119,7 +119,7 @@ contract OptionsFormulas is Ownable{
     function getCallUpperSegment(int256 _strikeSlopeValue,
         int32 _strickSlopeExponent,
         int256 _priceSlopeValue,
-        int32 _priceSlopeExponent)public onlyowner
+        int32 _priceSlopeExponent)public onlyOwner
     {
         callCollateral.upperSegment.strikeSlope.value = _strikeSlopeValue;
         callCollateral.upperSegment.strikeSlope.exponent = _strickSlopeExponent;
@@ -128,22 +128,22 @@ contract OptionsFormulas is Ownable{
     }
 
     //****************************Put Formulas***************************
-    function setPutLowerDemarcation(int256 _value,int32 _exponent)public onlyowner{
+    function setPutLowerDemarcation(int256 _value,int32 _exponent)public onlyOwner{
         putCollateral.lowerDemarcation.value = _value;
-        putCollateral.lowerDemarcation.exponent - _exponent;
+        putCollateral.lowerDemarcation.exponent = _exponent;
     }
-    function setPutUpperDemarcation(int256 _value,int32 _exponent)public onlyowner{
+    function setPutUpperDemarcation(int256 _value,int32 _exponent)public onlyOwner{
         putCollateral.upperDemarcation.value = _value;
-        putCollateral.upperDemarcation.exponent - _exponent;
+        putCollateral.upperDemarcation.exponent = _exponent;
     }
-    function setPutLowerLimit(int256 _value,int32 _exponent)public onlyowner{
+    function setPutLowerLimit(int256 _value,int32 _exponent)public onlyOwner{
         putCollateral.lowerLimit.value = _value;
-        putCollateral.lowerLimit.exponent - _exponent;
+        putCollateral.lowerLimit.exponent = _exponent;
     }
     function setPutLowerSegment(int256 _strikeSlopeValue,
         int32 _strickSlopeExponent,
         int256 _priceSlopeValue,
-        int32 _priceSlopeExponent)public onlyowner
+        int32 _priceSlopeExponent)public onlyOwner
     {
         putCollateral.lowerSegment.strikeSlope.value = _strikeSlopeValue;
         putCollateral.lowerSegment.strikeSlope.exponent = _strickSlopeExponent;
@@ -153,7 +153,7 @@ contract OptionsFormulas is Ownable{
     function getPutMidSegment(int256 _strikeSlopeValue,
         int32 _strickSlopeExponent,
         int256 _priceSlopeValue,
-        int32 _priceSlopeExponent)public onlyowner
+        int32 _priceSlopeExponent)public onlyOwner
     {
         putCollateral.midSegment.strikeSlope.value = _strikeSlopeValue;
         putCollateral.midSegment.strikeSlope.exponent = _strickSlopeExponent;
@@ -163,7 +163,7 @@ contract OptionsFormulas is Ownable{
     function getPutUpperSegment(int256 _strikeSlopeValue,
         int32 _strickSlopeExponent,
         int256 _priceSlopeValue,
-        int32 _priceSlopeExponent)public onlyowner
+        int32 _priceSlopeExponent)public onlyOwner
     {
         putCollateral.upperSegment.strikeSlope.value = _strikeSlopeValue;
         putCollateral.upperSegment.strikeSlope.exponent = _strickSlopeExponent;
@@ -179,7 +179,7 @@ contract OptionsFormulas is Ownable{
     }
 
     //******************************Internal functions******************************************
-    function _calNumberMulUint(Number number,uint256 value) internal returns (uint256,bool){
+    function _calNumberMulUint(Number number,uint256 value) internal pure returns (uint256,bool){
         bool bSignFlag = true;
         uint256 result;
         if (number.value < 0){
@@ -196,7 +196,7 @@ contract OptionsFormulas is Ownable{
         return (result , bSignFlag);
     }
     function _calSegmentPrice(CollateralSegment storage _segment,uint256 _strikePrice,uint256 _currentPrice)
-            internal
+            internal view
             returns (uint256){
         uint256 result;
         uint256 strikeResult;
@@ -217,7 +217,7 @@ contract OptionsFormulas is Ownable{
         return result;
     }
     function _calCollateralPrice(ThreeSegments storage _collateral,uint256 _strikePrice,uint256 _currentPrice)
-            internal
+            internal view
             returns (uint256){
         uint256 result;
         uint256 lowerDemarcation;

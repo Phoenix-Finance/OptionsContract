@@ -13,7 +13,7 @@ library BalanceMapping
     }
     struct IndexValue { uint keyIndex; uint256 value; }
     struct KeyFlag { address key; bool deleted; }
-    function insert(itmap storage self, address key, uint256 value) returns (bool)
+    function insert(itmap storage self, address key, uint256 value) public returns (bool)
     {
         uint keyIndex = self.data[key].keyIndex;
         self.data[key].value = value;
@@ -28,7 +28,7 @@ library BalanceMapping
             return false;
         }
     }
-    function remove(itmap storage self, address key) returns (bool)
+    function remove(itmap storage self, address key)public returns (bool)
     {
         uint keyIndex = self.data[key].keyIndex;
         if (keyIndex == 0)
@@ -38,26 +38,26 @@ library BalanceMapping
         self.size --;
         return true;
     }
-    function contains(itmap storage self, address key) returns (bool)
+    function contains(itmap storage self, address key)public view returns (bool)
     {
         return self.data[key].keyIndex > 0;
     }
-    function iterate_start(itmap storage self) returns (uint)
+    function iterate_start(itmap storage self)public view returns (uint)
     {
         return iterate_next(self, uint(-1));
     }
-    function iterate_valid(itmap storage self, uint keyIndex) returns (bool)
+    function iterate_valid(itmap storage self, uint keyIndex)public view returns (bool)
     {
         return keyIndex < self.keys.length;
     }
-    function iterate_next(itmap storage self, uint keyIndex) returns (uint)
+    function iterate_next(itmap storage self, uint keyIndex)public view returns (uint)
     {
         keyIndex++;
         while (keyIndex < self.keys.length && self.keys[keyIndex].deleted)
             keyIndex++;
         return keyIndex;
     }
-    function iterate_get(itmap storage self, uint keyIndex) returns (address key, uint256 value)
+    function iterate_get(itmap storage self, uint keyIndex)public view returns (address key, uint256 value)
     {
         key = self.keys[keyIndex].key;
         value = self.data[key].value;
@@ -99,13 +99,13 @@ contract Managerable is Expration {
     }
     /// @notice function Emergency situation that requires
     /// @notice contribution period to stop or not.
-    function setExpration(address managerAddress)
+    function setManager(address managerAddress)
     public
     onlyOwner
     {
         _managerAddress = managerAddress;
     }
-    function getExpration()public view returns (address) {
+    function getManager()public view returns (address) {
         return _managerAddress;
     }
 }
@@ -135,8 +135,8 @@ contract Managerable is Expration {
  */
 contract OptionsToken is Managerable, IERC20, IIterableToken {
     using SafeMath for uint256;
-    string public constant name = "OptionsToken";
-    string public constant symbol = "OptionsToken";
+    string public name = "OptionsToken";
+    string public symbol = "OptionsToken";
     uint8 public constant decimals = 18;
     
 
@@ -147,7 +147,7 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
     uint256 private _totalSupply;
 
     constructor (uint256 expiration,string tokenName) public{
-        _expiration = expiration;
+        setExpration(expiration);
         name = tokenName;
     }
     /**
@@ -177,7 +177,7 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
      * @dev See {IERC20-balanceOf}.
      */
     function balanceOf(address account) public view returns (uint256) {
-        return _balances[account].value;
+        return _balances.data[account].value;
     }
     /**
      * @dev See {IERC20-transfer}.
@@ -192,7 +192,7 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
     notExpired
     returns (bool)
     {
-        _transfer(_msgSender(), recipient, amount);
+        _transfer(msg.sender, recipient, amount);
         return true;
     }
 
@@ -214,7 +214,7 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
     public
     notExpired
     returns (bool) {
-        _approve(_msgSender(), spender, amount);
+        _approve(msg.sender, spender, amount);
         return true;
     }
 
@@ -235,7 +235,7 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
     notExpired
     returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
+        _approve(sender, msg.sender, _allowances[sender][msg.sender].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
     }
 
@@ -255,7 +255,7 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
     public
     notExpired
     returns (bool) {
-        _approve(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
+        _approve(msg.sender, spender, _allowances[msg.sender][spender].add(addedValue));
         return true;
     }
 
@@ -277,7 +277,7 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
     public
     notExpired
     returns (bool) {
-        _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
+        _approve(msg.sender, spender, _allowances[msg.sender][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
         return true;
     }
 
@@ -295,8 +295,8 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
     function _addBalance(address recipient, uint256 amount) internal {
         require(recipient != address(0), "ERC20: transfer to the zero address");
 
-        uint256 balance = _balances[recipient].value;
-        balance = balance.add(amount, "ERC20: transfer amount exceeds balance");
+        uint256 balance = _balances.data[recipient].value;
+        balance = balance.add(amount);
 
         BalanceMapping.insert(_balances,recipient,balance);
     }
@@ -306,13 +306,13 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
     function _subBalance(address recipient, uint256 amount) internal {
         require(recipient != address(0), "ERC20: transfer to the zero address");
 
-        uint256 balance = _balances[recipient].value;
-        balance = balance.sub(amount, "ERC20: transfer amount exceeds balance");
+        uint256 balance = _balances.data[recipient].value;
+        balance = balance.sub(amount);
 
         if (balance > 0){
             BalanceMapping.insert(_balances,recipient,balance);
         }else{
-            BalanceMapping.remove(_balances,recipient,balance);
+            BalanceMapping.remove(_balances,recipient);
         }
     }
     /**
@@ -402,6 +402,6 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
      */
     function _burnFrom(address account, uint256 amount) internal {
         _burn(account, amount);
-        _approve(account, _msgSender(), _allowances[account][_msgSender()].sub(amount, "ERC20: burn amount exceeds allowance"));
+        _approve(account, msg.sender, _allowances[account][msg.sender].sub(amount, "ERC20: burn amount exceeds allowance"));
     }
 }
