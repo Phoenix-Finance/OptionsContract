@@ -45,8 +45,8 @@ contract OptionsVault
     }
     struct KeyFlag { address key; bool deleted; }
     mapping(address => IndexValue) internal optionsMap;
-    KeyFlag[] optionsTokenList;
-    uint size;
+    KeyFlag[] internal optionsTokenList;
+    uint internal size = 0;
     function _insert(address key, 
                 OptionsType optType,
                 address collateral,
@@ -198,6 +198,13 @@ contract OptionsManager is OptionsModify {
     constructor() public {
         
     }
+    
+    event CreateOptions (addess index collateral,uint32 index underlyingAssets,uint256 index strikePrice,uint256 inde expiration,uint8 index optType);
+    event AddCollateral(address index optionsToken,uint256 index amount,uint256 mintOptionsTokenAmount);
+    event WithdrawCollateral(address index optionsToken,unit256 amount);
+    event Exercise(address index Sender,address index optionsToken);
+    event Liquidate(address index Sender,address index optionsToken,address index writer,uint256 amount);
+    event BurnOptionsToken(address index optionsToken,address index writer,uint256 amount);
     /**
         * @param collateral The collateral asset
         * @param collExp The precision of the collateral (-18 if ETH)
@@ -214,6 +221,8 @@ contract OptionsManager is OptionsModify {
         address newToken = new OptionsToken(expiration,"otoken");
         assert(newToken != 0);
         _insert(newToken,OptionsType(optType),collateral,underlyingAssets,expiration,strikePrice,strikeExp);
+        emit CreateOptions(collateral,underlyingAssets,strikePrice,expiration,optType);
+        
     }
     function addCollateral(address optionsToken,address collateral,uint256 amount,uint256 mintOptionsTokenAmount)public payable{
         require(_contains(optionsToken),"This OptionsToken does not exist");
@@ -221,6 +230,7 @@ contract OptionsManager is OptionsModify {
         require(optionsMap[optionsToken].options.collateralCurrency == collateral,"Collateral currency type error");
 
         _mintOptionsToken(optionsToken,collateral,amount,mintOptionsTokenAmount);
+        emit AddCollateral(optionsToken,amount,mintOptionsTokenAmount);
     }
     function withdrawCollateral(address OptionsToken,uint256 amount)public{
         require(_contains(OptionsToken),"This OptionsToken does not exist");
@@ -244,6 +254,7 @@ contract OptionsManager is OptionsModify {
                     oToken.transfer(msg.sender,amount);
                 }
                 optionsMap[OptionsToken].writers[index].collateralAmount = allCollateral;
+                emit WithdrawCollateral(OptionsToken,amount);
             }else{
 
             }
@@ -295,6 +306,7 @@ contract OptionsManager is OptionsModify {
             optToken.transfer(msg.sender,_payback);
             IIterableToken itoken = IIterableToken(optionsToken);
             itoken.burn(amount);
+            emit Liquidate(msg.sender,optionsToken,writer,amount);
         }
     }
     function burnOptionsToken(address optionsToken,uint256 amount)public{
@@ -318,7 +330,7 @@ contract OptionsManager is OptionsModify {
             //burn
             IIterableToken itoken = IIterableToken(optionsToken);
             itoken.burn(amount);
-
+            emit BurnOptionsToken(optionsToken,msg.sender,amount);
         }
     }
     function redeem(address collateral)public onlyOwner{
@@ -370,6 +382,7 @@ contract OptionsManager is OptionsModify {
                 collateralToken.transfer(addr,_payback);
             }
         }
+        emit Exercise(msg.sender,tokenAddress);
     }
     function _calExerciseTokenPayback(IndexValue storage optionsItem) internal returns (uint256){
         //calculate tokenPayback

@@ -34,6 +34,38 @@ contract OptionsFormulas is Ownable{
 
     ThreeSegments public callCollateral;
     ThreeSegments public putCollateral;
+    constructor () public {
+        //call options formulas
+        
+        callCollateral.lowerLimit = Number(1,-2);
+        //from 0.9*strikeprice to 1.3*strikeprice
+        callCollateral.lowerDemarcation = Number(9,-1);
+        callCollateral.upperDemarcation = Number(13,-1);
+        // LowerSegment formulas is NeedCollateral = 0*strikeprice + 5/9*price;
+        callCollateral.lowerSegment.strikeSlope = Number(0,0);
+        callCollateral.lowerSegment.priceSlope = Number(5555555556,-10);
+        //midSegment formulas is NeedCollateral = 0.5*strikeprice + 0*price;
+        callCollateral.midSegment.strikeSlope = Number(5,-1);
+        callCollateral.midSegment.priceSlope = Number(0,0);
+        //UpperSegment formulas is NeedCollateral = 1*price - 0.8*strikeprice
+        callCollateral.UpperSegment.strikeprice = Number(-8,-1);
+        callCollateral.UpperSegment.priceSlope = Number(1,0);
+        //Put options formulas
+        
+        callCollateral.lowerLimit = Number(1,-2);
+        //from 0.7*strikeprice to 1.1*strikeprice
+        callCollateral.lowerDemarcation = Number(7,-1);
+        callCollateral.upperDemarcation = Number(11,-1);
+        // LowerSegment formulas is NeedCollateral = 1.2*strikeprice -price;
+        callCollateral.lowerSegment.strikeSlope = Number(12,-1);
+        callCollateral.lowerSegment.priceSlope = Number(-1,0);
+        //midSegment formulas is NeedCollateral = 0.5*strikeprice + 0*price;
+        callCollateral.midSegment.strikeSlope = Number(5,-1);
+        callCollateral.midSegment.priceSlope = Number(0,0);
+        //UpperSegment formulas is NeedCollateral = -5/9*price + 10/9*strikeprice
+        callCollateral.UpperSegment.strikeprice = Number(11111111111,-10);
+        callCollateral.UpperSegment.priceSlope = Number(5555555556,-10);     
+    }
     //*****************************getter**********************************
 
     //****************************Call Formulas***************************

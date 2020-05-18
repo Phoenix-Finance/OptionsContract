@@ -144,7 +144,7 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
 
     mapping (address => mapping (address => uint256)) private _allowances;
 
-    uint256 private _totalSupply;
+    uint256 private _totalSupply = 0;
 
     constructor (uint256 expiration,string tokenName) public{
         setExpration(expiration);
