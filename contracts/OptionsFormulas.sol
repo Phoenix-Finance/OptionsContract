@@ -48,23 +48,23 @@ contract OptionsFormulas is Ownable{
         callCollateral.midSegment.strikeSlope = Number(5,-1);
         callCollateral.midSegment.priceSlope = Number(0,0);
         //UpperSegment formulas is NeedCollateral = 1*price - 0.8*strikeprice
-        callCollateral.UpperSegment.strikeprice = Number(-8,-1);
-        callCollateral.UpperSegment.priceSlope = Number(1,0);
+        callCollateral.upperSegment.strikeSlope = Number(-8,-1);
+        callCollateral.upperSegment.priceSlope = Number(1,0);
         //Put options formulas
         
-        callCollateral.lowerLimit = Number(1,-2);
+        putCollateral.lowerLimit = Number(1,-2);
         //from 0.7*strikeprice to 1.1*strikeprice
-        callCollateral.lowerDemarcation = Number(7,-1);
-        callCollateral.upperDemarcation = Number(11,-1);
+        putCollateral.lowerDemarcation = Number(7,-1);
+        putCollateral.upperDemarcation = Number(11,-1);
         // LowerSegment formulas is NeedCollateral = 1.2*strikeprice -price;
-        callCollateral.lowerSegment.strikeSlope = Number(12,-1);
-        callCollateral.lowerSegment.priceSlope = Number(-1,0);
+        putCollateral.lowerSegment.strikeSlope = Number(12,-1);
+        putCollateral.lowerSegment.priceSlope = Number(-1,0);
         //midSegment formulas is NeedCollateral = 0.5*strikeprice + 0*price;
-        callCollateral.midSegment.strikeSlope = Number(5,-1);
-        callCollateral.midSegment.priceSlope = Number(0,0);
+        putCollateral.midSegment.strikeSlope = Number(5,-1);
+        putCollateral.midSegment.priceSlope = Number(0,0);
         //UpperSegment formulas is NeedCollateral = -5/9*price + 10/9*strikeprice
-        callCollateral.UpperSegment.strikeprice = Number(11111111111,-10);
-        callCollateral.UpperSegment.priceSlope = Number(5555555556,-10);     
+        putCollateral.upperSegment.strikeSlope = Number(11111111111,-10);
+        putCollateral.upperSegment.priceSlope = Number(5555555556,-10);     
     }
     //*****************************getter**********************************
 

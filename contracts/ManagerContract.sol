@@ -4,15 +4,10 @@ import "./Ownable.sol";
 import "./OptionsToken.sol";
 import "./CompoundOracleInterface.sol";
 import "./OptionsFormulas.sol";
-contract OptionsVault
+import "./TransactionFee.sol";
+contract OptionsVault is TransactionFee
 {
     using SafeMath for uint256;
-    /* represents floting point numbers, where number = value * 10 ** exponent
-    i.e 0.1 = 10 * 10 ** -3 */
-    struct Number {
-        uint256 value;
-        int32 exponent;
-    }
     enum OptionsType{
         OptCall,
         OptPut
@@ -120,22 +115,26 @@ contract OptionsVault
         return keyIndex;
     }
 }
-contract OptionsModify is OptionsVault,Ownable {
+contract OptionsManager is OptionsVault {
     using SafeMath for uint256;
-
+        constructor() public {
+        
+    }
     IOptFormulas internal _optionsFormulas;
     ICompoundOracle internal _oracle;
 
-    address[] collateralList;
-
     // Number(10,-3) = 0.3%
     Number public liquidationIncentive = Number(10, -3);
+    
+    event CreateOptions (address indexed collateral,address indexed tokenAddress, uint32 indexed underlyingAssets,uint256 strikePrice,uint256 expiration,uint8 optType);
+    event AddCollateral(address indexed optionsToken,uint256 indexed amount,uint256 mintOptionsTokenAmount);
+    event WithdrawCollateral(address indexed optionsToken,uint256 amount);
+    event Exercise(address indexed Sender,address indexed optionsToken);
+    event Liquidate(address indexed Sender,address indexed optionsToken,address indexed writer,uint256 amount);
+    event BurnOptionsToken(address indexed optionsToken,address indexed writer,uint256 amount);
 
-    // Number(10,-3) = 0.3%
-    Number public transactionFee = Number(0, -3);
 
-    //Selling and buying token.
-    Number public tokenExchangeRate;
+
 
     //*******************getter***********************
     function getOracleAddress() public view returns(address){
@@ -145,16 +144,10 @@ contract OptionsModify is OptionsVault,Ownable {
         return address(_optionsFormulas);
     }
     function getCollateralList()public view returns (address[]){
-        return collateralList;
+        return getWhiteList();
     }
     function getLiquidationIncentive()public view returns (uint256,int32){
         return (liquidationIncentive.value,liquidationIncentive.exponent);
-    }
-    function getTransactionFee()public view returns (uint256,int32){
-        return (transactionFee.value,transactionFee.exponent);
-    }
-    function getTokenExchangeRate()public view returns (uint256,int32){
-        return (tokenExchangeRate.value,tokenExchangeRate.exponent);
     }
     //*******************setter***********************
     function setOracleAddress(address oracle)public onlyOwner{
@@ -164,47 +157,15 @@ contract OptionsModify is OptionsVault,Ownable {
         _optionsFormulas = IOptFormulas(formulas);
     }
     function addCollateralCurrency(address tokenAddress)public onlyOwner{
-        collateralList.push(tokenAddress);
+        addWhiteList(tokenAddress);
     }
     function removeCollateralCurrency(address tokenAddress)public onlyOwner{
-        for (uint256 i=0;i<collateralList.length;i++){
-            if (collateralList[i] == tokenAddress){
-                if (i!=collateralList.length-1){
-                    collateralList[i] = collateralList[collateralList.length-1];
-                }
-                collateralList.length--;
-                return;
-            }
-        }
+        removeWhiteList(tokenAddress);
     }
     function setLiquidationIncentive(uint256 value,int32 exponent)public onlyOwner{
         liquidationIncentive.value = value;
         liquidationIncentive.exponent = exponent;
     }
-    function setTransactionFee(uint256 value,int32 exponent)public onlyOwner{
-        transactionFee.value = value;
-        transactionFee.exponent = exponent;
-    }
-    function setTokenExchangeRate(uint256 value,int32 exponent)public onlyOwner{
-        tokenExchangeRate.value = value;
-        tokenExchangeRate.exponent = exponent;
-    }
-
-}
-contract OptionsManager is OptionsModify {
-
-    mapping (address => uint256) 	private managerFee;
-
-    constructor() public {
-        
-    }
-    
-    event CreateOptions (addess index collateral,uint32 index underlyingAssets,uint256 index strikePrice,uint256 inde expiration,uint8 index optType);
-    event AddCollateral(address index optionsToken,uint256 index amount,uint256 mintOptionsTokenAmount);
-    event WithdrawCollateral(address index optionsToken,unit256 amount);
-    event Exercise(address index Sender,address index optionsToken);
-    event Liquidate(address index Sender,address index optionsToken,address index writer,uint256 amount);
-    event BurnOptionsToken(address index optionsToken,address index writer,uint256 amount);
     /**
         * @param collateral The collateral asset
         * @param collExp The precision of the collateral (-18 if ETH)
@@ -221,7 +182,7 @@ contract OptionsManager is OptionsModify {
         address newToken = new OptionsToken(expiration,"otoken");
         assert(newToken != 0);
         _insert(newToken,OptionsType(optType),collateral,underlyingAssets,expiration,strikePrice,strikeExp);
-        emit CreateOptions(collateral,underlyingAssets,strikePrice,expiration,optType);
+        emit CreateOptions(collateral,newToken,underlyingAssets,strikePrice,expiration,optType);
         
     }
     function addCollateral(address optionsToken,address collateral,uint256 amount,uint256 mintOptionsTokenAmount)public payable{
@@ -349,11 +310,7 @@ contract OptionsManager is OptionsModify {
         return _ierc20 == IERC20(0);
     }
     function isCollateralCurrency(address _collateral) public view returns (bool){
-        for (uint256 i=0;i<collateralList.length;i++){
-            if (collateralList[i] == _collateral)
-                return true;
-        }
-        return false;
+        return isEligibleAddress(_collateral);
     }
     function _exercise(address tokenAddress,IndexValue storage optionsItem)internal {
         if (!_isExpired(optionsItem)  || _isExercised(optionsItem)) {

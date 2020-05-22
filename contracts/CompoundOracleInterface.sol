@@ -1,4 +1,4 @@
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.26;
 
 contract ICompoundOracle {
     /**
@@ -10,5 +10,7 @@ contract ICompoundOracle {
     function getPrice(address asset) public view returns (uint);
     function getUnderlyingPrice(uint256 cToken) public view returns (uint);
     function getOptionsPrice(address oToken) public view returns (uint);
+    function getSellOptionsPrice(address oToken) public view returns (uint);
+    function getBuyOptionsPrice(address oToken) public view returns (uint);
 
 }

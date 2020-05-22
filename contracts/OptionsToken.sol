@@ -1,4 +1,4 @@
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.26;
 import "./Ownable.sol";
 import "./IERC20.sol";
 import "./SafeMath.sol";
