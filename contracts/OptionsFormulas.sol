@@ -64,7 +64,7 @@ contract OptionsFormulas is Ownable{
         putCollateral.midSegment.priceSlope = Number(0,0);
         //UpperSegment formulas is NeedCollateral = -5/9*price + 10/9*strikeprice
         putCollateral.upperSegment.strikeSlope = Number(11111111111,-10);
-        putCollateral.upperSegment.priceSlope = Number(5555555556,-10);     
+        putCollateral.upperSegment.priceSlope = Number(-5555555556,-10);     
     }
     //*****************************getter**********************************
 
@@ -138,7 +138,7 @@ contract OptionsFormulas is Ownable{
         callCollateral.lowerSegment.priceSlope.value = _priceSlopeValue;
         callCollateral.lowerSegment.priceSlope.exponent = _priceSlopeExponent;
     }
-    function getCallMidSegment(int256 _strikeSlopeValue,
+    function setCallMidSegment(int256 _strikeSlopeValue,
         int32 _strickSlopeExponent,
         int256 _priceSlopeValue,
         int32 _priceSlopeExponent)public onlyOwner
@@ -148,7 +148,7 @@ contract OptionsFormulas is Ownable{
         callCollateral.midSegment.priceSlope.value = _priceSlopeValue;
         callCollateral.midSegment.priceSlope.exponent = _priceSlopeExponent;
     }
-    function getCallUpperSegment(int256 _strikeSlopeValue,
+    function setCallUpperSegment(int256 _strikeSlopeValue,
         int32 _strickSlopeExponent,
         int256 _priceSlopeValue,
         int32 _priceSlopeExponent)public onlyOwner
@@ -182,7 +182,7 @@ contract OptionsFormulas is Ownable{
         putCollateral.lowerSegment.priceSlope.value = _priceSlopeValue;
         putCollateral.lowerSegment.priceSlope.exponent = _priceSlopeExponent;
     }
-    function getPutMidSegment(int256 _strikeSlopeValue,
+    function setPutMidSegment(int256 _strikeSlopeValue,
         int32 _strickSlopeExponent,
         int256 _priceSlopeValue,
         int32 _priceSlopeExponent)public onlyOwner
@@ -192,7 +192,7 @@ contract OptionsFormulas is Ownable{
         putCollateral.midSegment.priceSlope.value = _priceSlopeValue;
         putCollateral.midSegment.priceSlope.exponent = _priceSlopeExponent;
     }
-    function getPutUpperSegment(int256 _strikeSlopeValue,
+    function setPutUpperSegment(int256 _strikeSlopeValue,
         int32 _strickSlopeExponent,
         int256 _priceSlopeValue,
         int32 _priceSlopeExponent)public onlyOwner
@@ -240,11 +240,19 @@ contract OptionsFormulas is Ownable{
         if (strikeSign && priceSign){
             result = strikeResult.add(priceResult);
         }else if(strikeSign){
-            result = strikeResult.sub(priceResult);
+            if(strikeResult > priceResult){
+                result = strikeResult.sub(priceResult);
+            }else{
+                result = 0;
+            }
         }else if(priceSign) {
-            result = priceResult.sub(strikeResult);
+            if (priceResult > strikeResult){
+                result = priceResult.sub(strikeResult);
+            }else{
+                result = 0;
+            }
         }else{
-            //err;
+            result = 0;
         }
         return result;
     }

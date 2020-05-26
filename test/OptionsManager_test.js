@@ -1,5 +1,7 @@
 var OptionsManager = artifacts.require("OptionsManager");
-
+var TestCompoundOracle = artifacts.require("TestCompoundOracle");
+var OptionsFormulas = artifacts.require("OptionsFormulas");
+var OptionsToken = artifacts.require("OptionsToken");
 contract('OptionsManager', function (accounts){
 
   // --- test add collateral address
@@ -81,7 +83,7 @@ contract('OptionsManager', function (accounts){
         assert.equal(whiteList.length,whiteLength,"add whiteList is error");
     });
   });
-  //test remove collateral address sender is not owner
+    //test remove collateral address sender is not owner
     it('remove collateral address,sender is not owner', function (){
         var managerInstance;
         var whiteLength = 0;
@@ -107,5 +109,90 @@ contract('OptionsManager', function (accounts){
         }).then(function(whiteList){
             assert.equal(whiteList.length,whiteLength,"add whiteList is error");
         });
+    });
+    //test Oracle address and formulas address
+    it('set Oracle address and formulas address', function (){
+      var managerInstance;
+      var OracleInstance;
+      var formulasInstance;
+      return OptionsManager.deployed().then(function(instance){
+          managerInstance = instance;
+      }).then(function(){
+          return TestCompoundOracle.deployed();
+      }).then(function(instance){
+          OracleInstance = instance;
+          return managerInstance.setOracleAddress(instance.address);
+      }).then(function(){
+          return OptionsFormulas.deployed();
+      }).then(async function (instance){
+        formulasInstance = instance;
+        return managerInstance.setFormulasAddress(instance.address);
+      }).then(async function(){
+          let result = await managerInstance.getOracleAddress();
+          assert.equal(result,OracleInstance.address, "Oracle address setting Failed");
+          result = await managerInstance.getFormulasAddress();
+          assert.equal(result,formulasInstance.address,"formulas address setting Failed");
+      });
+  });
+  //create new options token
+  it('create new options token', function (){
+    var managerInstance;
+    var collateralAddress = "0x0000000000000000000000000000000000000000";
+    return OptionsManager.deployed().then(function(instance){
+        managerInstance = instance;
+        return managerInstance.addCollateralCurrency(collateralAddress);
+    }).then(async function(){
+        let optionsList = await managerInstance.getOptionsTokenList();
+        console.log(optionsList);
+        var whiteList = await managerInstance.getCollateralList();
+        console.log(whiteList);
+        await managerInstance.createOptionsToken(whiteList[0],1,200,3,100000,0);
+        optionsList = await managerInstance.getOptionsTokenList();
+        console.log(optionsList);
+        await managerInstance.createOptionsToken(whiteList[1],0,200,3,10000000,0);
+        optionsList = await managerInstance.getOptionsTokenList();
+        console.log(optionsList);
+        let options0 = await managerInstance.getOptionsTokenInfo(optionsList[0]);
+        console.log(options0);
+        let options1 = await managerInstance.getOptionsTokenInfo(optionsList[1]);
+        console.log(options1);
+    })  
+  });
+   //add collateral
+   it('add collateral to new options token', function (){
+    var managerInstance;
+    var collateralAddress = "0x0000000000000000000000000000000000000000";
+    return OptionsManager.deployed().then(function(instance){
+        managerInstance = instance;
+    }).then(async function(){
+        let optionsList = await managerInstance.getOptionsTokenList();
+        console.log(optionsList);
+        /*
+        let errorThrown = false;
+        try {
+              await managerInstance.addCollateral(optionsList[0],collateralAddress,10,40,{from:accounts[1],value:10});
+        }
+        catch (err) {
+            errorThrown = true;
+        }
+        assert.isTrue(errorThrown);*/
+        await managerInstance.addCollateral(optionsList[0],collateralAddress,100,50,{from:accounts[1],value:100});
+
+        let otoken = await OptionsToken.at(optionsList[0]);
+        await otoken.increaseAllowance(managerInstance.address,25,{from:accounts[1]});
+        await managerInstance.burnOptionsToken(optionsList[0],25,{from:accounts[1]});
+
+        await managerInstance.withdrawCollateral(optionsList[0],50,{from:accounts[1]});
+    })  
   });
 });
+async function FunctionRevertTest(func){
+    let errorThrown = false;
+    try {
+        func();
+    }
+    catch (err) {
+        errorThrown = true;
+    }
+    assert.isTrue(errorThrown);
+}

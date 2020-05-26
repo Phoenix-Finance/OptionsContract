@@ -114,6 +114,24 @@ contract OptionsVault is TransactionFee
             keyIndex++;
         return keyIndex;
     }
+    function getOptionsTokenList()public view returns (address[]){
+        address[] memory optionsToken = new address[](size);
+        uint256 index = 0;
+        for(uint256 i=0;i<optionsTokenList.length;i++){
+            if(!optionsTokenList[i].deleted){
+                optionsToken[index] = optionsTokenList[i].key;
+                index++;
+            }
+        }
+        return optionsToken;
+    }
+    function getOptionsTokenInfo(address tokenAddress)public view returns (OptionsType,address,uint32,uint256,uint256,bool){
+        if (_contains(tokenAddress)){
+            OptionsInfo storage options = optionsMap[tokenAddress].options;
+            return (options.optType,options.collateralCurrency,options.underlyingAssets,options.expiration,
+                options.strikePrice,options.isExercised);
+        }
+    }
 }
 contract OptionsManager is OptionsVault {
     using SafeMath for uint256;
@@ -132,6 +150,7 @@ contract OptionsManager is OptionsVault {
     event Exercise(address indexed Sender,address indexed optionsToken);
     event Liquidate(address indexed Sender,address indexed optionsToken,address indexed writer,uint256 amount);
     event BurnOptionsToken(address indexed optionsToken,address indexed writer,uint256 amount);
+    event DebugEvent(uint256 indexed value0,uint256 indexed value1,uint256 indexed value2);
 
 
 
@@ -168,10 +187,9 @@ contract OptionsManager is OptionsVault {
     }
     /**
         * @param collateral The collateral asset
-        * @param collExp The precision of the collateral (-18 if ETH)
         */
     function createOptionsToken(address collateral,
-    int32 collExp,
+//    int32 collExp,
     uint32 underlyingAssets,
     uint256 strikePrice,
     int32 strikeExp,
@@ -179,7 +197,8 @@ contract OptionsManager is OptionsVault {
     uint8 optType)
     public onlyOwner{
         require(isCollateralCurrency(collateral) , "It is unsupported token");
-        address newToken = new OptionsToken(expiration,"otoken");
+        expiration = expiration.add(now);
+        address newToken = new OptionsToken(expiration,"OptionsToken");
         assert(newToken != 0);
         _insert(newToken,OptionsType(optType),collateral,underlyingAssets,expiration,strikePrice,strikeExp);
         emit CreateOptions(collateral,newToken,underlyingAssets,strikePrice,expiration,optType);
@@ -274,23 +293,24 @@ contract OptionsManager is OptionsVault {
        require(_contains(optionsToken),"This OptionsToken does not exist");
         IndexValue storage optionsItem = optionsMap[optionsToken];
         require(!_isExpired(optionsItem), "OptionsToken expired");
-        uint256 index = optionsItem.writers.length;
         for(uint256 i=0;i<optionsItem.writers.length;i++){
             if(optionsItem.writers[i].writer == msg.sender){
-                index = i;
                 break;
             }
         }
-        if (index != optionsItem.writers.length) {
-            if( amount > optionsItem.writers[index].OptionsTokenAmount){
+        emit DebugEvent(i,0,0);
+        if (i != optionsItem.writers.length) {
+            emit DebugEvent(i,amount,optionsItem.writers[i].OptionsTokenAmount);
+            if( amount > optionsItem.writers[i].OptionsTokenAmount){
                 return;
             }
             IERC20 optToken = IERC20(optionsToken);
             optToken.transferFrom(msg.sender, address(this), amount);
-            optionsItem.writers[index].OptionsTokenAmount = optionsItem.writers[index].OptionsTokenAmount.sub(amount);
+            optionsItem.writers[i].OptionsTokenAmount = optionsItem.writers[i].OptionsTokenAmount.sub(amount);
             //burn
             IIterableToken itoken = IIterableToken(optionsToken);
             itoken.burn(amount);
+            emit DebugEvent(i,amount,optionsItem.writers[i].OptionsTokenAmount);
             emit BurnOptionsToken(optionsToken,msg.sender,amount);
         }
     }
@@ -384,17 +404,16 @@ contract OptionsManager is OptionsVault {
         uint256 allCollateral = 0;
         uint256 allMintToken = 0;
         OptionsWriter[] storage writers = optionsMap[optionsToken].writers;
-        uint256 index = writers.length;
         for (uint256 i=0;i<writers.length;i++){
             if (writers[i].writer == msg.sender){
-                index = i;
                 break;
             }
         }
-        if(index != writers.length){
-            allCollateral = writers[index].collateralAmount;
-            allMintToken = writers[index].OptionsTokenAmount;
+        if(i != writers.length){
+            allCollateral = writers[i].collateralAmount;
+            allMintToken = writers[i].OptionsTokenAmount;
         }
+        emit DebugEvent(i,allCollateral,allMintToken);
         allMintToken = allMintToken.add(mintOptionsTokenAmount);
 
         if (collateral == address(0)){
@@ -405,20 +424,21 @@ contract OptionsManager is OptionsVault {
             oToken.transferFrom(msg.sender, address(this), amount);
             allCollateral = allCollateral.add(amount);
         }
-        if (_isSufficientCollateral(optionsMap[optionsToken].options,allCollateral,allMintToken)){
-            if (index == writers.length){
-                optionsMap[optionsToken].writers.push(OptionsWriter(msg.sender,allCollateral,allMintToken));
-            }else{
-                optionsMap[optionsToken].writers[index].collateralAmount = allCollateral;
-                optionsMap[optionsToken].writers[index].OptionsTokenAmount = allMintToken;
-            }
-            //mint
-            IIterableToken itoken = IIterableToken(optionsToken);
-            itoken.mint(msg.sender,amount);
-
-        }else{
+        emit DebugEvent(i,allCollateral,allMintToken);
+        if (!_isSufficientCollateral(optionsMap[optionsToken].options,allCollateral,allMintToken)){
             return false;
         }
+//        require(_isSufficientCollateral(optionsMap[optionsToken].options,allCollateral,allMintToken),"Collateral is insufficient");
+        if (i == writers.length){
+            optionsMap[optionsToken].writers.push(OptionsWriter(msg.sender,allCollateral,allMintToken));
+        }else{
+            optionsMap[optionsToken].writers[i].collateralAmount = allCollateral;
+            optionsMap[optionsToken].writers[i].OptionsTokenAmount = allMintToken;
+        }
+        //mint
+        IIterableToken itoken = IIterableToken(optionsToken);
+        itoken.mint(msg.sender,mintOptionsTokenAmount);
+
         return true;
     }
     function _burnOptionsToken(address OptionsToken,uint256 burnOptionsTokenAmount)private returns(bool){
@@ -461,16 +481,19 @@ contract OptionsManager is OptionsVault {
     function _isSufficientCollateral(OptionsInfo storage options,uint256 allCollateral,uint256 allMintToken) internal view returns (bool){
         uint256 collateralValue = _calCollateralValue(options.collateralCurrency,allCollateral);
         uint256 underlyingPrice = _oracle.getUnderlyingPrice(options.underlyingAssets);
+        emit DebugEvent(collateralValue,underlyingPrice,options.strikePrice);
         uint256 needCollateral = 0;
         if (options.optType == OptionsType.OptCall){
-            needCollateral = _optionsFormulas.callCollateralPrice(options.strikePrice,underlyingPrice);
+            needCollateral = _optionsFormulas.callCollateralPrice(options.strikePrice,underlyingPrice);            
             needCollateral = needCollateral.mul(allMintToken);
+            emit DebugEvent(collateralValue,underlyingPrice,needCollateral);
             if (needCollateral > collateralValue){
                 return false;
             }
         }else{
             needCollateral = _optionsFormulas.putCollateralPrice(options.strikePrice,underlyingPrice);
             needCollateral = needCollateral.mul(allMintToken);
+            emit DebugEvent(collateralValue,underlyingPrice,needCollateral);
             if (needCollateral > collateralValue){
                 return false;
             }

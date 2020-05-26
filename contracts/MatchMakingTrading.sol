@@ -182,7 +182,7 @@ contract matchMakingTrading is TransactionFee{
             sellOrderMap[settlementsCurrency][optionsToken].length = index;
         }
     }
-    function _calPayment(uint256 amount,uint256 optionsPrice,uint256 currencyPrice) returns (uint256,uint256) {
+    function _calPayment(uint256 amount,uint256 optionsPrice,uint256 currencyPrice) internal view returns (uint256,uint256) {
         uint256 optionsPay = optionsPrice.mul(amount).div(currencyPrice);
         uint256 transFee = _calNumberMulUint(transactionFee,optionsPay);
         optionsPay = optionsPay.sub(transFee);

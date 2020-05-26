@@ -3,8 +3,9 @@ import "./Ownable.sol";
 import "./IERC20.sol";
 import "./SafeMath.sol";
 import "./IIterableToken.sol";
-library BalanceMapping
+contract BalanceMapping is IIterableToken
 {
+    itmap internal _balances;
     struct itmap
     {
         mapping(address => IndexValue) data;
@@ -13,54 +14,55 @@ library BalanceMapping
     }
     struct IndexValue { uint keyIndex; uint256 value; }
     struct KeyFlag { address key; bool deleted; }
-    function insert(itmap storage self, address key, uint256 value) public returns (bool)
+    function insert(address key, uint256 value) internal returns (bool)
     {
-        uint keyIndex = self.data[key].keyIndex;
-        self.data[key].value = value;
+        uint keyIndex = _balances.data[key].keyIndex;
+        _balances.data[key].value = value;
         if (keyIndex > 0)
            return true;
         else
         {
-            keyIndex = self.keys.length++;
-            self.data[key].keyIndex = keyIndex + 1;
-            self.keys[keyIndex].key = key;
-            self.size++;
+            keyIndex = _balances.keys.length++;
+            _balances.data[key].keyIndex = keyIndex + 1;
+            _balances.keys[keyIndex].key = key;
+            _balances.size++;
             return false;
         }
     }
-    function remove(itmap storage self, address key)public returns (bool)
+    function remove(address key)internal returns (bool)
     {
-        uint keyIndex = self.data[key].keyIndex;
+        uint keyIndex = _balances.data[key].keyIndex;
         if (keyIndex == 0)
             return false;
-        delete self.data[key];
-        self.keys[keyIndex - 1].deleted = true;
-        self.size --;
+        delete _balances.data[key];
+        _balances.keys[keyIndex - 1].deleted = true;
+        _balances.size --;
         return true;
     }
-    function contains(itmap storage self, address key)public view returns (bool)
+    function contains(address key)public view returns (bool)
     {
-        return self.data[key].keyIndex > 0;
+        return _balances.data[key].keyIndex > 0;
     }
-    function iterate_start(itmap storage self)public view returns (uint)
+    function iterate_balance_start()public view returns (uint)
     {
-        return iterate_next(self, uint(-1));
+        uint keyIndex = uint(-1);
+        return iterate_balance_next(keyIndex);
     }
-    function iterate_valid(itmap storage self, uint keyIndex)public view returns (bool)
+    function iterate_balance_valid(uint keyIndex)public view returns (bool)
     {
-        return keyIndex < self.keys.length;
+        return keyIndex < _balances.keys.length;
     }
-    function iterate_next(itmap storage self, uint keyIndex)public view returns (uint)
+    function iterate_balance_next(uint keyIndex)public view returns (uint)
     {
         keyIndex++;
-        while (keyIndex < self.keys.length && self.keys[keyIndex].deleted)
+        while (keyIndex < _balances.keys.length && _balances.keys[keyIndex].deleted)
             keyIndex++;
         return keyIndex;
     }
-    function iterate_get(itmap storage self, uint keyIndex)public view returns (address key, uint256 value)
+    function iterate_balance_get(uint keyIndex)public view returns (address key, uint256 value)
     {
-        key = self.keys[keyIndex].key;
-        value = self.data[key].value;
+        key = _balances.keys[keyIndex].key;
+        value = _balances.data[key].value;
     }
 }
 contract Expration is Ownable {
@@ -68,12 +70,12 @@ contract Expration is Ownable {
     uint256  private _expiration;
 
     modifier notExpired() {
-        require(now < _expiration);
+        require(now < _expiration,"Token is Expired");
         _;
     }
 
     modifier isExpired() {
-        require(now >= _expiration);
+        require(now >= _expiration,"Token is not Expired");
         _;
     }
 
@@ -94,7 +96,7 @@ contract Managerable is Expration {
     address private _managerAddress;
 
     modifier onlyManager() {
-        require(_managerAddress == msg.sender);
+        require(_managerAddress == msg.sender,"Managerable: caller is not the Manager");
         _;
     }
     /// @notice function Emergency situation that requires
@@ -133,14 +135,13 @@ contract Managerable is Expration {
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract OptionsToken is Managerable, IERC20, IIterableToken {
+contract OptionsToken is Managerable, IERC20,BalanceMapping  {
     using SafeMath for uint256;
     string public name = "OptionsToken";
     string public symbol = "OptionsToken";
     uint8 public constant decimals = 18;
     
 
-    BalanceMapping.itmap private _balances;
 
     mapping (address => mapping (address => uint256)) private _allowances;
 
@@ -148,6 +149,7 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
 
     constructor (uint256 expiration,string tokenName) public{
         setExpration(expiration);
+        setManager(msg.sender);
         name = tokenName;
     }
     /**
@@ -157,22 +159,7 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
         return _totalSupply;
     }
 
-    function iterate_balance_start() public view returns (uint)
-    {
-        return BalanceMapping.iterate_start(_balances);
-    }
-    function iterate_balance_valid( uint keyIndex)public view returns (bool)
-    {
-        return BalanceMapping.iterate_valid(_balances,keyIndex);
-    }
-    function iterate_balance_next(uint keyIndex)public view returns (uint)
-    {
-        return BalanceMapping.iterate_next(_balances,keyIndex);
-    }
-    function iterate_balance_get(uint keyIndex)public view returns (address, uint256)
-    {
-        return BalanceMapping.iterate_get(_balances,keyIndex);
-    }
+
     /**
      * @dev See {IERC20-balanceOf}.
      */
@@ -298,7 +285,7 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
         uint256 balance = _balances.data[recipient].value;
         balance = balance.add(amount);
 
-        BalanceMapping.insert(_balances,recipient,balance);
+        insert(recipient,balance);
     }
     /**
      * @dev add `recipient`'s balance to iterable mapping balances.
@@ -310,9 +297,9 @@ contract OptionsToken is Managerable, IERC20, IIterableToken {
         balance = balance.sub(amount);
 
         if (balance > 0){
-            BalanceMapping.insert(_balances,recipient,balance);
+            insert(recipient,balance);
         }else{
-            BalanceMapping.remove(_balances,recipient);
+            remove(recipient);
         }
     }
     /**
