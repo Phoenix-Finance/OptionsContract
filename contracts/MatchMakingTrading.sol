@@ -3,7 +3,8 @@ import "./TransactionFee.sol";
 import "./CompoundOracleInterface.sol";
 import "./SafeMath.sol";
 import "./IERC20.sol";
-contract matchMakingTrading is TransactionFee{
+import "./IOptionsManager.sol";
+contract MatchMakingTrading is TransactionFee {
     using SafeMath for uint256;
     struct SellOptionsOrder {
         address owner;
@@ -16,15 +17,37 @@ contract matchMakingTrading is TransactionFee{
         uint256 amount;
         uint256 settlementsAmount;
     }
-    ICompoundOracle _oracle;
+    uint256 private _tradingEnd = 5 hours;
+    IOptionsManager private _optionsManager;
+    ICompoundOracle private _oracle;
     //mapping settlementsCurrency => OptionsToken => OptionsOrder
     mapping(address => mapping(address => PayOptionsOrder[])) public payOrderMap;
     mapping(address => mapping(address => SellOptionsOrder[])) public sellOrderMap;
     
-
+    //*******************getter***********************
+    function getOracleAddress() public view returns(address){
+        return address(_oracle);
+    }
+    function getOptionsManagerAddress() public view returns(address){
+        return address(_optionsManager);
+    }
+    function getTradingEnd() public view returns(uint256){
+        return _tradingEnd;
+    }
+    //*******************setter***********************
+    function setOracleAddress(address oracle)public onlyOwner{
+        _oracle = ICompoundOracle(oracle);
+    }
+    function setOptionsManagerAddress(address optionsManager)public onlyOwner{
+        _optionsManager = IOptionsManager(optionsManager);
+    }
+    function getTradingEnd(uint256 tradingEnd) public onlyOwner {
+        _tradingEnd = tradingEnd;
+    }
     function addPayOrder(address optionsToken,address settlementsCurrency,uint256 deposit,uint256 buyAmount) public payable{
         require(isEligibleAddress(settlementsCurrency),"This settlements currency is ineligible");
-        uint256 tokenPrice = _oracle.getPrice(optionsToken);
+        require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
+        uint256 tokenPrice = _oracle.getBuyOptionsPrice(optionsToken);
         uint256 currencyPrice = _oracle.getPrice(settlementsCurrency);
         var (optionsPay,transFee) = _calPayment(buyAmount,tokenPrice,currencyPrice);
         uint256 settlements = deposit;
@@ -34,14 +57,12 @@ contract matchMakingTrading is TransactionFee{
             IERC20 settlement = IERC20(settlementsCurrency);
             settlement.transferFrom(msg.sender,address(this),settlements);           
         }
-        if (optionsPay.add(transFee)>settlements){
-            //Deposit is unsufficient;
-            return;
-        }
+        require(optionsPay.add(transFee)<=settlements,"settlements Currency is insufficient!");
         payOrderMap[settlementsCurrency][optionsToken].push(PayOptionsOrder(msg.sender,now,buyAmount,settlements));
     }
     function addSellOrder(address optionsToken,address settlementsCurrency,uint256 amount) public {
         require(isEligibleAddress(settlementsCurrency),"This settlements currency is ineligible");
+        require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         IERC20 ERC20Token = IERC20(optionsToken);
         ERC20Token.transferFrom(msg.sender,address(this),amount);  
         sellOrderMap[settlementsCurrency][optionsToken].push(SellOptionsOrder(msg.sender,now,amount));
@@ -55,9 +76,7 @@ contract matchMakingTrading is TransactionFee{
         uint256 allPay = 0;
         uint256 transFee = 0;
         (allPay,transFee) = _calPayment(amount,tokenPrice,currencyPrice);
-        if (allPay.add(transFee) > currencyAmount){
-            return;
-        }
+        require(allPay.add(transFee)<=currencyAmount,"pay value is insufficient!");
         SellOptionsOrder[] storage orderList = sellOrderMap[settlementsCurrency][optionsToken];
         for (uint256 i=0;i<orderList.length;i++) {
             uint256 optionsAmount = amount;
@@ -189,5 +208,9 @@ contract matchMakingTrading is TransactionFee{
         transFee = transFee.mul(2);
         return (transFee, optionsPay);
     }
-
+    function isEligibleOptionsToken(address optionsToken) public view returns(bool) {
+        var (,,,expiration,,exercised) = _optionsManager.getOptionsTokenInfo(optionsToken);
+        uint256 tradingEnd = _tradingEnd.add(now);
+        return (expiration > 0 && tradingEnd < expiration && !exercised);
+    }
 }
