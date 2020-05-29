@@ -12,6 +12,10 @@ contract('MatchMakingTrading', function (accounts){
         await tradingInstance.addPayOrder(optionsAddr,"0x0000000000000000000000000000000000000000",200,200,{from:accounts[2],value:500});
         let value = await tradingInstance.getPayOrderList(optionsAddr,"0x0000000000000000000000000000000000000000");
         console.log(value);
+        tradingInstance.redeemPayOrder(optionsAddr,"0x0000000000000000000000000000000000000000",{from:accounts[2]});
+        value = await tradingInstance.getPayOrderList(optionsAddr,"0x0000000000000000000000000000000000000000");
+        console.log(value);
+
         await functionModule.OptionsManagerAddCollateral(managerAddress,optionsAddr,"0x0000000000000000000000000000000000000000",1200,300,accounts[3]);
         let token = await IERC20.at(optionsAddr);
         await token.approve(tradingInstance.address,220,{from:accounts[3]});

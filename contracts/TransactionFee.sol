@@ -34,15 +34,15 @@ contract TransactionFee is AddressWhiteList {
         transactionFee.exponent = exponent;
     }
 
-    function redeem(address collateral)public onlyOwner{
-        uint256 fee = managerFee[collateral];
+    function redeem(address currency)public onlyOwner{
+        uint256 fee = managerFee[currency];
         require (fee > 0, "It's empty balance");
-        managerFee[collateral] = 0;
-        IERC20 collateralToken = IERC20(collateral);
-        if (collateral == address(0)){
+        managerFee[currency] = 0;
+         if (currency == address(0)){
             msg.sender.transfer(fee);
         }else{
-            collateralToken.transfer(msg.sender,fee);
+        IERC20 currencyToken = IERC20(currency);
+           currencyToken.transfer(msg.sender,fee);
         }
     }
     function redeemAll()public onlyOwner{

@@ -29,6 +29,8 @@ contract MatchMakingTrading is TransactionFee {
     event SellOptionsToken(address indexed from,address indexed optionsToken,address indexed settlementsCurrency,uint256 amount);
     event ReturnExpiredOrders(address indexed optionsToken);
     event BuyOptionsToken(address indexed from,address indexed optionsToken,address indexed settlementsCurrency,uint256 amount);
+    event RedeemPayOrder(address indexed from,address indexed optionsToken,address indexed settlementsCurrency,uint256 amount);
+    event RedeemSellOrder(address indexed from,address indexed optionsToken,address indexed settlementsCurrency,uint256 amount);
     event DebugEvent(uint256 value0,uint256 value1,uint256 value2);
     //*******************getter***********************
     function getOracleAddress() public view returns(address){
@@ -101,7 +103,7 @@ contract MatchMakingTrading is TransactionFee {
         sellOrderMap[settlementsCurrency][optionsToken].push(SellOptionsOrder(msg.sender,now,amount));
         emit AddSellOrder(msg.sender,optionsToken,settlementsCurrency,amount);
     }
-    function redeemPayOrder(address optionsToken,address settlementsCurrency){
+    function redeemPayOrder(address optionsToken,address settlementsCurrency) public{
         require(isEligibleAddress(settlementsCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         PayOptionsOrder[] storage orderList = payOrderMap[settlementsCurrency][optionsToken];
@@ -117,6 +119,7 @@ contract MatchMakingTrading is TransactionFee {
                         settlement.transfer(orderList[i].owner,payAmount);           
                     }
                 }
+                emit RedeemPayOrder(msg.sender,optionsToken,settlementsCurrency,orderList[i].amount);
                 for (uint256 j=i+1;j<orderList.length;j++) {
                     orderList[i].owner = orderList[j].owner;
                     orderList[i].createdTime = orderList[j].createdTime;
@@ -130,7 +133,7 @@ contract MatchMakingTrading is TransactionFee {
         }
 
     }
-    function redeemSellOrder(address optionsToken,address settlementsCurrency){
+    function redeemSellOrder(address optionsToken,address settlementsCurrency) public {
         require(isEligibleAddress(settlementsCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         SellOptionsOrder[] storage orderList = sellOrderMap[settlementsCurrency][optionsToken];
@@ -142,6 +145,7 @@ contract MatchMakingTrading is TransactionFee {
                     IERC20 options = IERC20(optionsToken);
                     options.transfer(orderList[i].owner,payAmount);           
                 }
+                emit RedeemSellOrder(msg.sender,optionsToken,settlementsCurrency,payAmount);
                 for (uint256 j=i+1;j<orderList.length;j++) {
                     orderList[i].owner = orderList[j].owner;
                     orderList[i].createdTime = orderList[j].createdTime;
@@ -339,9 +343,8 @@ contract MatchMakingTrading is TransactionFee {
         }
         delete sellOrderMap[settlementsCurrency][optionsToken];
     }
-    function _returnExpiredPayOrders(address optionsToken,address settlementsCurrency){
+    function _returnExpiredPayOrders(address optionsToken,address settlementsCurrency) internal{
         PayOptionsOrder[] storage orderList = payOrderMap[settlementsCurrency][optionsToken];
-        uint256 index = 0;
         for (uint i=0;i<orderList.length;i++) {
             if (orderList[i].settlementsAmount > 0) {
                 uint256 payAmount = orderList[i].settlementsAmount;
