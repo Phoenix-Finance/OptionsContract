@@ -139,8 +139,8 @@ contract OptionsVault is TransactionFee
     function getOptionsTokenInfo(address tokenAddress)public view returns (uint8,address,uint32,uint256,uint256,bool){
         if (_contains(tokenAddress)){
             OptionsInfo storage options = optionsMap[tokenAddress].options;
-            return (uint8(options.optType),options.collateralCurrency,options.underlyingAssets,options.expiration,
-                options.strikePrice,options.isExercised);
+            return (uint8(options.optType),options.collateralCurrency,options.underlyingAssets,
+                options.strikePrice,options.expiration,options.isExercised);
         }
     }
 }
