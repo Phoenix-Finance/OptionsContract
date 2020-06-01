@@ -26,9 +26,9 @@ contract MatchMakingTrading is TransactionFee {
 
     event AddPayOrder(address indexed from,address indexed optionsToken,address indexed settlementsCurrency,uint256 amount, uint256 settlementsAmount);
     event AddSellOrder(address indexed from,address indexed optionsToken,address indexed settlementsCurrency,uint256 amount);
-    event SellOptionsToken(address indexed from,address indexed optionsToken,address indexed settlementsCurrency,uint256 amount);
+    event SellOptionsToken(address indexed from,address indexed optionsToken,address indexed settlementsCurrency,uint256 optionsPrice,uint256 amount);
+    event BuyOptionsToken(address indexed from,address indexed optionsToken,address indexed settlementsCurrency,uint256 optionsPrice,uint256 amount);
     event ReturnExpiredOrders(address indexed optionsToken);
-    event BuyOptionsToken(address indexed from,address indexed optionsToken,address indexed settlementsCurrency,uint256 amount);
     event RedeemPayOrder(address indexed from,address indexed optionsToken,address indexed settlementsCurrency,uint256 amount);
     event RedeemSellOrder(address indexed from,address indexed optionsToken,address indexed settlementsCurrency,uint256 amount);
     event DebugEvent(uint256 value0,uint256 value1,uint256 value2);
@@ -192,7 +192,7 @@ contract MatchMakingTrading is TransactionFee {
                 settlement.transfer(msg.sender,currencyAmount);           
             }           
         }
-        emit BuyOptionsToken(msg.sender,optionsToken,settlementsCurrency,_totalBuy);
+        emit BuyOptionsToken(msg.sender,optionsToken,settlementsCurrency,tokenPrice,_totalBuy);
         _removeEmptySellOrder(optionsToken,settlementsCurrency);
     }
     function sellOptionsToken(address optionsToken,uint256 amount,address settlementsCurrency) public {
@@ -229,7 +229,7 @@ contract MatchMakingTrading is TransactionFee {
         if (amount > 0){
             erc20Token.transfer(msg.sender,amount);
         }
-        emit SellOptionsToken(msg.sender,optionsToken,settlementsCurrency,_totalSell);
+        emit SellOptionsToken(msg.sender,optionsToken,settlementsCurrency,tokenPrice,_totalSell);
         _removeEmptyPayOrder(optionsToken,settlementsCurrency);
     }
     function returnExpiredOrders()public{
