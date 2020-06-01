@@ -75,7 +75,7 @@ contract MatchMakingTrading is TransactionFee {
     function setOptionsManagerAddress(address optionsManager)public onlyOwner{
         _optionsManager = IOptionsManager(optionsManager);
     }
-    function getTradingEnd(uint256 tradingEnd) public onlyOwner {
+    function setTradingEnd(uint256 tradingEnd) public onlyOwner {
         _tradingEnd = tradingEnd;
     }
     function addPayOrder(address optionsToken,address settlementsCurrency,uint256 deposit,uint256 buyAmount) public payable{
@@ -360,8 +360,10 @@ contract MatchMakingTrading is TransactionFee {
         delete payOrderMap[settlementsCurrency][optionsToken];
     }
     function isEligibleOptionsToken(address optionsToken) public view returns(bool) {
-        var (,,,expiration,,exercised) = _optionsManager.getOptionsTokenInfo(optionsToken);
+        var (,,,,expiration,exercised) = _optionsManager.getOptionsTokenInfo(optionsToken);
         uint256 tradingEnd = _tradingEnd.add(now);
+        return tradingEnd < expiration;
+        return !exercised;
         return (expiration > 0 && tradingEnd < expiration && !exercised);
     }
 }

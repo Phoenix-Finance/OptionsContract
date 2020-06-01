@@ -1,0 +1,27 @@
+{
+  "name": "optionscontract",
+  "version": "1.0.0",
+  "author":"Smith Ambition",
+  "description": "options token contract",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "bn.js": "^5.1.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FinNexus/OptionsContract.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/FinNexus/OptionsContract/issues"
+  },
+  "homepage": "https://github.com/FinNexus/OptionsContract#readme"
+}

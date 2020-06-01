@@ -146,10 +146,10 @@ contract('OptionsManager', function (accounts){
         console.log(optionsList);
         var whiteList = await managerInstance.getWhiteList();
         console.log(whiteList);
-        await managerInstance.createOptionsToken(whiteList[0],1,200,3,50,0);
+        await managerInstance.createOptionsToken("options token 1",whiteList[0],1,200,50,0);
         optionsList = await managerInstance.getOptionsTokenList();
         console.log(optionsList);
-        await managerInstance.createOptionsToken(whiteList[0],2,200,3,10000,0);
+        await managerInstance.createOptionsToken("options token 1",whiteList[0],2,200,10000,0);
         optionsList = await managerInstance.getOptionsTokenList();
         console.log(optionsList);
         let options0 = await managerInstance.getOptionsTokenInfo(optionsList[0]);

@@ -39,10 +39,10 @@ exports.migrateMatchMakingTrading = async function(){
 exports.OptionsManagerCreateOptionsToken = async function(managerAddress,collateral,underlyingAssets,strikePrice,expiration,optType){
     let managerInstance = await OptionsManager.at(managerAddress);
     await managerInstance.addWhiteList(collateral);
-    await managerInstance.createOptionsToken(collateral,underlyingAssets,strikePrice,3,expiration,optType);
+    await managerInstance.createOptionsToken("options token 1",collateral,underlyingAssets,strikePrice,expiration,optType);
     let options = await managerInstance.getOptionsTokenList();
     let value = await managerInstance.getOptionsTokenInfo(options[options.length-1]);
-    console.log(value[3].toNumber());
+    console.log(value[4].toNumber());
     return options[options.length-1];
 }
 exports.OptionsManagerGetFirstOptionsToken = async function(managerAddress,collateral,underlyingAssets,strikePrice,expiration,optType){
@@ -52,7 +52,7 @@ exports.OptionsManagerGetFirstOptionsToken = async function(managerAddress,colla
         return await exports.OptionsManagerCreateOptionsToken(managerAddress,collateral,underlyingAssets,strikePrice,expiration,optType);
     }else{
         let value = await managerInstance.getOptionsTokenInfo(options[options.length-1]);
-        console.log(value[3].toNumber());
+        console.log(value[4].toNumber());
         return options[0];
     }
 }
