@@ -23,13 +23,6 @@ contract TestCompoundOracle is CompoundOracle {
         return 200;
     }
 
-    function getOptionsPrice(address oToken) public view returns (uint){
-        uint256 price = CompoundOracle.getOptionsPrice(oToken);
-        if (price != 0) {
-            return price;
-        }
-        return 100;
-    }
     function getSellOptionsPrice(address oToken) public view returns (uint){
         uint256 price = CompoundOracle.getSellOptionsPrice(oToken);
         if (price != 0) {

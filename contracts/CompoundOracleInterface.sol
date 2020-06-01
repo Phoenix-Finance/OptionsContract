@@ -9,7 +9,6 @@ interface ICompoundOracle {
   */
     function getPrice(address asset) external view returns (uint256);
     function getUnderlyingPrice(uint256 cToken) external view returns (uint256);
-    function getOptionsPrice(address oToken) external view returns (uint256);
     function getSellOptionsPrice(address oToken) external view returns (uint256);
     function getBuyOptionsPrice(address oToken) external view returns (uint256);
 

@@ -35,9 +35,6 @@ contract CompoundOracle is ICompoundOracle,Ownable {
         return priceMap[underlying];
     }
 
-    function getOptionsPrice(address oToken) public view returns (uint256){
-        return priceMap[uint256(oToken)];
-    }
     function getSellOptionsPrice(address oToken) public view returns (uint256){
         uint256 key = uint256(oToken)*10+1;
         return priceMap[key];

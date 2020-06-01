@@ -295,7 +295,7 @@ contract OptionsManager is OptionsVault {
             }
             IERC20 optToken = IERC20(optionsToken);
             optToken.transferFrom(msg.sender, address(this), amount);
-            uint256 tokenPrice = _oracle.getOptionsPrice(optionsToken);
+            uint256 tokenPrice = _oracle.getBuyOptionsPrice(optionsToken);
             uint256 _payback = tokenPrice.mul(amount);
             uint256 price = _oracle.getPrice(optionsItem.options.collateralCurrency);
             _payback = _payback.div(price);
