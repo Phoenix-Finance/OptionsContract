@@ -81,7 +81,7 @@ contract MatchMakingTrading is TransactionFee {
     function addPayOrder(address optionsToken,address settlementsCurrency,uint256 deposit,uint256 buyAmount) public payable{
         require(isEligibleAddress(settlementsCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
-        uint256 tokenPrice = _oracle.getBuyOptionsPrice(optionsToken);
+        uint256 tokenPrice = _oracle.getSellOptionsPrice(optionsToken);
         uint256 currencyPrice = _oracle.getPrice(settlementsCurrency);
         var (optionsPay,transFee) = _calPayment(buyAmount,tokenPrice,currencyPrice);
         uint256 settlements = deposit;
@@ -211,17 +211,16 @@ contract MatchMakingTrading is TransactionFee {
                 optionsAmount = orderList[i].amount;
             }
 
-            amount = amount.sub(optionsAmount);
-            _totalSell = _totalSell.add(optionsAmount);
-            emit DebugEvent(2,amount,_totalSell);
+            amount = amount.sub(optionsAmount);            
             uint256 sellAmount = 0;
             uint256 leftCurrency = 0;
             (sellAmount,leftCurrency) = _orderTrading(optionsToken,optionsAmount,tokenPrice,settlementsCurrency,orderList[i].settlementsAmount,currencyPrice,
             msg.sender,orderList[i].owner);
+            _totalSell = _totalSell.add(sellAmount);
+            emit DebugEvent(2,amount,_totalSell);
             emit DebugEvent(3,sellAmount,leftCurrency);
             orderList[i].amount = orderList[i].amount.sub(sellAmount);
             orderList[i].settlementsAmount = leftCurrency;
-            emit DebugEvent(4,orderList[i].amount,orderList[i].settlementsAmount);
             if (amount == 0) {
                 break;
             }
@@ -284,7 +283,7 @@ contract MatchMakingTrading is TransactionFee {
                     uint256 payAmount = orderList[i].settlementsAmount;
                     orderList[i].settlementsAmount = 0;
                     if (settlementsCurrency == address(0)) {
-                        orderList[i].owner.transfer(payAmount);                
+                        emit DebugEvent(123,i,payAmount);
                     }else {
                         IERC20 settlement = IERC20(settlementsCurrency);
                         settlement.transfer(orderList[i].owner,payAmount);           
@@ -325,7 +324,8 @@ contract MatchMakingTrading is TransactionFee {
         return true;
     }
     function _calPayment(uint256 amount,uint256 optionsPrice,uint256 currencyPrice) internal view returns (uint256,uint256) {
-        uint256 optionsPay = optionsPrice.mul(amount).div(currencyPrice);
+        uint256 allPayment = optionsPrice.mul(amount);
+        uint256 optionsPay = allPayment.div(currencyPrice);
         uint256 transFee = _calNumberMulUint(transactionFee,optionsPay);
         optionsPay = optionsPay.sub(transFee);
         transFee = transFee.mul(2);

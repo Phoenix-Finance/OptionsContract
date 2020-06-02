@@ -33,7 +33,16 @@ contract TransactionFee is AddressWhiteList {
         transactionFee.value = value;
         transactionFee.exponent = exponent;
     }
-
+    function getFeeBalance(address settlement)public view returns(uint256){
+        return managerFee[settlement];
+    }
+    function getAllFeeBalances()public view returns(address[],uint256[]){
+        uint256[] memory balances = new uint256[](whiteList.length);
+        for (uint256 i=0;i<whiteList.length;i++){
+            balances[i] = managerFee[whiteList[i]];
+        }
+        return (whiteList,balances);
+    }
     function redeem(address currency)public onlyOwner{
         uint256 fee = managerFee[currency];
         require (fee > 0, "It's empty balance");
@@ -46,7 +55,7 @@ contract TransactionFee is AddressWhiteList {
         }
     }
     function redeemAll()public onlyOwner{
-            for (uint256 i=0;i<whiteList.length;i++){
+        for (uint256 i=0;i<whiteList.length;i++){
             uint256 fee = managerFee[whiteList[i]];
             if (fee > 0){
                 managerFee[whiteList[i]] = 0;

@@ -22,8 +22,10 @@ contract('OptionsManager', function (accounts){
 
         console.log("call options adding collateral!");
         await testAddcollateral(collateral0,priceObj,expiration,0,amount,accounts);
+        await testAddcollateralTwice(collateral0,priceObj,expiration,0,amount,accounts);
         console.log("put options adding collateral!");
         await testAddcollateral(collateral0,priceObj,expiration,1,amount,accounts);
+        await testAddcollateralTwice(collateral0,priceObj,expiration,1,amount,accounts);
     });
     it('OptionsManager adding Collateral case two', async function (){
         let priceObj = {
@@ -40,8 +42,10 @@ contract('OptionsManager', function (accounts){
         let amount = 1000000000;
         console.log("call options adding collateral!");
         await testAddcollateral(collateral0,priceObj,expiration,0,amount,accounts);
+        await testAddcollateralTwice(collateral0,priceObj,expiration,0,amount,accounts);
         console.log("put options adding collateral!");
         await testAddcollateral(collateral0,priceObj,expiration,1,amount,accounts);
+        await testAddcollateralTwice(collateral0,priceObj,expiration,1,amount,accounts);
     });
     it('OptionsManager adding Collateral case three', async function (){
         let priceObj = {
@@ -58,8 +62,10 @@ contract('OptionsManager', function (accounts){
         let amount = 1000000000;
         console.log("call options adding collateral!");
         await testAddcollateral(collateral0,priceObj,expiration,0,amount,accounts);
+        await testAddcollateralTwice(collateral0,priceObj,expiration,0,amount,accounts);
         console.log("put options adding collateral!");
         await testAddcollateral(collateral0,priceObj,expiration,1,amount,accounts);
+        await testAddcollateralTwice(collateral0,priceObj,expiration,1,amount,accounts);
     });
 });
 async function testAddcollateral(collateral,priceObj,expiration,optType,amount,accounts){
@@ -117,4 +123,37 @@ async function testAddcollateral(collateral,priceObj,expiration,optType,amount,a
 
         }
     }
+}
+
+async function testAddcollateralTwice(collateral,priceObj,expiration,optType,amount,accounts){
+    var managerInstance = await functionModule.migrateOptionsManager();
+    let oracleAddr = await managerInstance.getOracleAddress();
+    await functionModule.SetOraclePrice(oracleAddr,priceObj);
+    let managerAddress = managerInstance.address;
+    let oracleInstance = await TestCompoundOracle.at(oracleAddr);
+    let currentPrice = await oracleInstance.getUnderlyingPrice(1);
+    let colPrice = await oracleInstance.getPrice(collateral);
+    let formulasAddr = await managerInstance.getFormulasAddress();
+    let formulasIns = await OptionsFormulas.at(formulasAddr);
+    assert(currentPrice>0, "Oracle get underlyingPrice error");
+    console.log(currentPrice,colPrice);
+    let strikePrice = currentPrice;
+    let optionsaddress = await functionModule.OptionsManagerCreateOptionsToken(managerAddress,collateral,1,strikePrice,expiration,optType);
+    let CollateralPrice = functionModule.CalCollateralPrice(strikePrice,currentPrice,optType);
+    if (optType == 0){
+        let getPriceBn = await formulasIns.callCollateralPrice(strikePrice,currentPrice);
+        let getPrice = getPriceBn.toNumber();
+        assert(Math.abs(CollateralPrice-getPrice)<2,"CollateralPrice calculate error!");
+        CollateralPrice = getPrice;
+    }else{
+        let getPriceBn = await formulasIns.putCollateralPrice(strikePrice,currentPrice);
+        let getPrice = getPriceBn.toNumber();
+        assert(Math.abs(CollateralPrice-getPrice)<2,"CollateralPrice calculate error!");
+        CollateralPrice = getPrice;
+    }
+    let needMint = Math.floor(colPrice*amount/CollateralPrice);
+    console.log(CollateralPrice,needMint);
+    let mintAmount = Math.floor(needMint/2);
+    await functionModule.OptionsManagerAddCollateral(managerAddress,optionsaddress,collateral,amount,mintAmount,accounts[2]);
+    await functionModule.OptionsManagerAddCollateral(managerAddress,optionsaddress,collateral,0,mintAmount,accounts[2]);
 }

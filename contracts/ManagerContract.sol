@@ -457,9 +457,9 @@ contract OptionsManager is OptionsVault {
         }
         allMintToken = allMintToken.add(mintOptionsTokenAmount);
         if (collateral == address(0)){
-            require(msg.value > 0,"Must transfer some coins");
+//            require(msg.value > 0,"Must transfer some coins");
             allCollateral = allCollateral.add(msg.value);
-        }else{
+        }else if (amount > 0){
             IERC20 oToken = IERC20(collateral);
             oToken.transferFrom(msg.sender, address(this), amount);
             allCollateral = allCollateral.add(amount);
