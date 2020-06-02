@@ -133,20 +133,20 @@ function _calCallMidSegment(stickPrice , currentPrice){
     return Math.floor(result);
 }
 function _calCallUpperSegment(stickPrice , currentPrice){
-    var result = currentPrice - stickPrice*8/10;
+    var result = currentPrice - Math.floor(stickPrice*8/10);
     return Math.floor(result);
 }
 
 function _calPutLowerSegment(stickPrice , currentPrice){
-    var result = -currentPrice+stickPrice*1.2;
-     return Math.floor(result);
+    var result = -currentPrice+Math.floor(stickPrice*12/10);
+     return result;
 }
 function _calPutMidSegment(stickPrice , currentPrice){
     var result = stickPrice/2;
     return Math.floor(result);
 }
 function _calPutUpperSegment(stickPrice , currentPrice){
-    var result = 10*stickPrice/9- currentPrice*5/9;
+    var result = Math.floor(10*stickPrice/9)- Math.floor(currentPrice*5/9);
     var minValue = stickPrice/100;
     if (result<minValue){
         result = minValue;
