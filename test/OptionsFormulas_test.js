@@ -1,4 +1,5 @@
 var OptionsFormulas = artifacts.require("OptionsFormulas");
+const functionModule = require ("./testFunctions");
 const BN = require('bn.js');
 
 contract('OptionsFormulas', function (accounts){
@@ -30,46 +31,46 @@ contract('OptionsFormulas', function (accounts){
             var currentPrice = strickPrice;
             //mid segment
             var result = await formulasInstance.callCollateralPrice(strickPrice,currentPrice);
-            var correct = _calCallCollateral(strickPrice,currentPrice);
+            var correct = functionModule.CalCallCollateral(strickPrice,currentPrice);
             assert(result.toNumber() == correct,"callCollateralPrice failed");
             currentPrice = strickPrice*9/10;
             result = await formulasInstance.callCollateralPrice(strickPrice,currentPrice);
-            correct = _calCallCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalCallCollateral(strickPrice,currentPrice);
             assert(result.toNumber() == correct,"callCollateralPrice failed");
             currentPrice = strickPrice*13/10;
             result = await formulasInstance.callCollateralPrice(strickPrice,currentPrice);
-            correct = _calCallCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalCallCollateral(strickPrice,currentPrice);
             assert(result.toNumber() == correct,"callCollateralPrice failed");
             //lower segment
             currentPrice = strickPrice*5/10;
             result = await formulasInstance.callCollateralPrice(strickPrice,currentPrice);
-            correct = _calCallCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalCallCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"callCollateralPrice failed");
             currentPrice = strickPrice*3/10;
             result = await formulasInstance.callCollateralPrice(strickPrice,currentPrice);
-            correct = _calCallCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalCallCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"callCollateralPrice failed");
             currentPrice = strickPrice*1/1000;
             result = await formulasInstance.callCollateralPrice(strickPrice,currentPrice);
-            correct = _calCallCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalCallCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"callCollateralPrice failed");
             //upper segment
             currentPrice = strickPrice*15/10;
             result = await formulasInstance.callCollateralPrice(strickPrice,currentPrice);
-            correct = _calCallCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalCallCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"callCollateralPrice failed");
             currentPrice = strickPrice*2;
             result = await formulasInstance.callCollateralPrice(strickPrice,currentPrice);
-            correct = _calCallCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalCallCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"callCollateralPrice failed");
             currentPrice = strickPrice*5;
             result = await formulasInstance.callCollateralPrice(strickPrice,currentPrice);
-            correct = _calCallCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalCallCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"callCollateralPrice failed");
         });
@@ -116,51 +117,51 @@ contract('OptionsFormulas', function (accounts){
             var currentPrice = strickPrice;
             //mid segment
             var result = await formulasInstance.putCollateralPrice(strickPrice,currentPrice);
-            var correct = _calPutCollateral(strickPrice,currentPrice);
+            var correct = functionModule.CalPutCollateral(strickPrice,currentPrice);
             assert(result.toNumber() == correct,"putCollateralPrice failed");
             currentPrice = strickPrice*7/10;
             result = await formulasInstance.putCollateralPrice(strickPrice,currentPrice);
-            correct = _calPutCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalPutCollateral(strickPrice,currentPrice);
             assert(result.toNumber() == correct,"putCollateralPrice failed");
             currentPrice = strickPrice*11/10;
             result = await formulasInstance.putCollateralPrice(strickPrice,currentPrice);
-            correct = _calPutCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalPutCollateral(strickPrice,currentPrice);
             assert(result.toNumber() == correct,"putCollateralPrice failed");
             //lower segment
             currentPrice = strickPrice*5/10;
             result = await formulasInstance.putCollateralPrice(strickPrice,currentPrice);
-            correct = _calPutCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalPutCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"putCollateralPrice failed");
             currentPrice = strickPrice*2/10;
             result = await formulasInstance.putCollateralPrice(strickPrice,currentPrice);
-            correct = _calPutCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalPutCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"putCollateralPrice failed");
             currentPrice = strickPrice*1/1000;
             result = await formulasInstance.putCollateralPrice(strickPrice,currentPrice);
-            correct = _calPutCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalPutCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"putCollateralPrice failed");
             //upper segment
             currentPrice = strickPrice*13/10;
             result = await formulasInstance.putCollateralPrice(strickPrice,currentPrice);
-            correct = _calPutCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalPutCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"putCollateralPrice failed");
             currentPrice = strickPrice*16/10;
             result = await formulasInstance.putCollateralPrice(strickPrice,currentPrice);
-            correct = _calPutCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalPutCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"putCollateralPrice failed");
             currentPrice = strickPrice*2;
             result = await formulasInstance.putCollateralPrice(strickPrice,currentPrice);
-            correct = _calPutCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalPutCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"putCollateralPrice failed");
             currentPrice = strickPrice*10;
             result = await formulasInstance.putCollateralPrice(strickPrice,currentPrice);
-            correct = _calPutCollateral(strickPrice,currentPrice);
+            correct = functionModule.CalPutCollateral(strickPrice,currentPrice);
             console.log(result.toNumber(),correct);
             assert(result.toNumber() == correct,"putCollateralPrice failed");
         });
@@ -200,54 +201,4 @@ async function setFourParamaters(instance, getFunction,setFunction){
     console.log(settings[0].toNumber(),settings[1].toNumber());
     assert(result[0].toNumber()==settings[0].toNumber() && result[1].toNumber() == settings[1].toNumber(),
         result[2].toNumber()==settings[2].toNumber() && result[3].toNumber() == settings[3].toNumber(),setFunction+ " failed");
-}
-function _calCallCollateral(stickPrice , currentPrice){
-    if(currentPrice<stickPrice*0.9){
-        return _calCallLowerSegment(stickPrice,currentPrice);
-    }else if (currentPrice<stickPrice*1.3){
-        return _calCallMidSegment(stickPrice,currentPrice);
-    }else {
-        return _calCallUpperSegment(stickPrice,currentPrice);
-    }
-}
-function _calCallLowerSegment(stickPrice , currentPrice){
-    var result = currentPrice*5/9;
-    var minValue = stickPrice/100;
-    if (result<minValue){
-        result = minValue;
-    }
-    return parseInt(result);
-}
-function _calCallMidSegment(stickPrice , currentPrice){
-    var result = stickPrice/2;
-    return parseInt(result);
-}
-function _calCallUpperSegment(stickPrice , currentPrice){
-    var result = currentPrice - stickPrice*8/10;
-    return parseInt(result);
-}
-function _calPutCollateral(stickPrice , currentPrice){
-    if(currentPrice<stickPrice*0.7){
-        return _calPutLowerSegment(stickPrice,currentPrice);
-    }else if (currentPrice<stickPrice*1.1){
-        return _calPutMidSegment(stickPrice,currentPrice);
-    }else {
-        return _calPutUpperSegment(stickPrice,currentPrice);
-    }
-}
-function _calPutLowerSegment(stickPrice , currentPrice){
-    var result = -currentPrice+stickPrice*1.2;
-     return parseInt(result);
-}
-function _calPutMidSegment(stickPrice , currentPrice){
-    var result = stickPrice/2;
-    return parseInt(result);
-}
-function _calPutUpperSegment(stickPrice , currentPrice){
-    var result = 10*stickPrice/9- currentPrice*5/9;
-    var minValue = stickPrice/100;
-    if (result<minValue){
-        result = minValue;
-    }
-    return Math.ceil(result);
 }

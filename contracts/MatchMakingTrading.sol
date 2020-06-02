@@ -362,8 +362,6 @@ contract MatchMakingTrading is TransactionFee {
     function isEligibleOptionsToken(address optionsToken) public view returns(bool) {
         var (,,,,expiration,exercised) = _optionsManager.getOptionsTokenInfo(optionsToken);
         uint256 tradingEnd = _tradingEnd.add(now);
-        return tradingEnd < expiration;
-        return !exercised;
         return (expiration > 0 && tradingEnd < expiration && !exercised);
     }
 }

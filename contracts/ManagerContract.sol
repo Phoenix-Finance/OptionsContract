@@ -528,15 +528,15 @@ contract OptionsManager is OptionsVault {
         uint256 needCollateral = 0;
         if (options.optType == OptionsType.OptCall){
             needCollateral = _optionsFormulas.callCollateralPrice(options.strikePrice,underlyingPrice);            
-            needCollateral = needCollateral.mul(allMintToken);
             emit DebugEvent(14,collateralValue,needCollateral);
+            needCollateral = needCollateral.mul(allMintToken);
             if (needCollateral > collateralValue){
                 return false;
             }
         }else{
             needCollateral = _optionsFormulas.putCollateralPrice(options.strikePrice,underlyingPrice);
-            needCollateral = needCollateral.mul(allMintToken);
             emit DebugEvent(15,collateralValue,needCollateral);
+            needCollateral = needCollateral.mul(allMintToken);
             if (needCollateral > collateralValue){
                 return false;
             }

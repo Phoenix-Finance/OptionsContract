@@ -17,9 +17,6 @@ contract CompoundOracle is ICompoundOracle,Ownable {
         require(underlying>0 , "underlying cannot be zero");
         priceMap[underlying] = price;
     }
-    function setOptionsPrice(address optoken,uint256 price) public onlyOwner {
-        priceMap[uint256(optoken)] = price;
-    }
     function setSellOptionsPrice(address optoken,uint256 price) public onlyOwner {
         uint256 key = uint256(optoken)*10+1;
         priceMap[key] = price;

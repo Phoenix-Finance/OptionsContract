@@ -165,10 +165,8 @@ contract('OptionsManager', function (accounts){
     return OptionsManager.deployed().then(function(instance){
         managerInstance = instance;
     }).then(async function(){
-        return;
         let optionsList = await managerInstance.getOptionsTokenList();
         console.log(optionsList);
-        /*
         let errorThrown = false;
         try {
               await managerInstance.addCollateral(optionsList[0],collateralAddress,10,40,{from:accounts[1],value:10});
@@ -176,7 +174,7 @@ contract('OptionsManager', function (accounts){
         catch (err) {
             errorThrown = true;
         }
-        assert.isTrue(errorThrown);*/
+        assert.isTrue(errorThrown);
         await managerInstance.addCollateral(optionsList[0],collateralAddress,100,50,{from:accounts[1],value:100});
         let writers = await managerInstance.getOptionsTokenWriterList(optionsList[0]);
         console.log(writers);
