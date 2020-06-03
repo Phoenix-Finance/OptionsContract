@@ -139,13 +139,13 @@ contract MatchMakingTrading is TransactionFee {
         SellOptionsOrder[] storage orderList = sellOrderMap[settlementsCurrency][optionsToken];
         for (uint256 i=0;i<orderList.length;i++){
             if (orderList[i].owner == msg.sender){
-                uint256 payAmount = orderList[i].amount;
+                uint256 tokenAmount = orderList[i].amount;
                 if (orderList[i].amount > 0){
                     orderList[i].amount = 0;
                     IERC20 options = IERC20(optionsToken);
-                    options.transfer(orderList[i].owner,payAmount);           
+                    options.transfer(orderList[i].owner,tokenAmount);
                 }
-                emit RedeemSellOrder(msg.sender,optionsToken,settlementsCurrency,payAmount);
+                emit RedeemSellOrder(msg.sender,optionsToken,settlementsCurrency,tokenAmount);
                 for (uint256 j=i+1;j<orderList.length;j++) {
                     orderList[i].owner = orderList[j].owner;
                     orderList[i].createdTime = orderList[j].createdTime;
