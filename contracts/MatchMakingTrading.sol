@@ -234,7 +234,7 @@ contract MatchMakingTrading is TransactionFee {
     function returnExpiredOrders()public{
         address[] memory options = _optionsManager.getOptionsTokenList();
         for (uint256 i=0;i<options.length;i++){
-            if (!isEligibleAddress(options[i])){
+            if (!isEligibleOptionsToken(options[i])){
                 for (uint j=0;j<whiteList.length;j++){
                     _returnExpiredSellOrders(options[i],whiteList[j]);
                     _returnExpiredPayOrders(options[i],whiteList[j]);
@@ -336,9 +336,9 @@ contract MatchMakingTrading is TransactionFee {
         SellOptionsOrder[] storage orderList = sellOrderMap[settlementsCurrency][optionsToken];
         for (uint i=0;i<orderList.length;i++) {
             if (orderList[i].amount > 0) {
-                uint256 payAmount = orderList[i].amount;
+                uint256 tokenAmount = orderList[i].amount;
                 orderList[i].amount = 0;
-                options.transfer(orderList[i].owner,payAmount);
+                options.transfer(orderList[i].owner,tokenAmount);
             }
         }
         delete sellOrderMap[settlementsCurrency][optionsToken];

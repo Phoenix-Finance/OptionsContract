@@ -37,5 +37,7 @@ contract TestCompoundOracle is CompoundOracle {
         }
         return 110;
     }
-
+    function getEthBalance(address account) public view returns (uint) {
+        return account.balance;
+    }
 }

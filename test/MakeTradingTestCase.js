@@ -17,7 +17,7 @@ contract('MatchMakingTrading', function (accounts){
             }]
         }
         let expiration = 36000;
-        let amount = 1000000000;
+        let amount = 10000000000;
         let sellPrice = 990000;
         let buyPrice = 1010000;
         var tradingInstance = await functionModule.migrateMatchMakingTrading();
@@ -117,7 +117,75 @@ contract('MatchMakingTrading', function (accounts){
         console.log(fee.toNumber(),calFee);
         assert(Math.abs(fee.toNumber()-calFee)<10,"Manager Fee test failed");
         await redeemSellOrder(tradingInstance,optionsaddress,collateral0,accounts);
-
+    });
+    it('MatchMakingTrading returnExpiredOrders test', async function (){
+        let priceObj = {
+            PriceList: [{
+                address:collateral0,
+                price:1000000,
+            }],
+            underlyingAssets:[{
+                id:1,
+                price:1000000,
+            }]
+        }
+        let expiration = 18000+60;
+        let expiration1 = 36000;
+        let amount = 1000000000;
+        let sellPrice = 990000;
+        let buyPrice = 1010000;
+        var tradingInstance = await functionModule.migrateMatchMakingTrading();
+        let managerAddress = await tradingInstance.getOptionsManagerAddress();
+        console.log(managerAddress);
+        let managerIns = await OptionsManager.at(managerAddress);
+        await tradingInstance.addWhiteList(collateral0);
+        let result = await Addcollateral(managerIns,collateral0,priceObj,expiration,0,amount,accounts[9]);
+        let result1 = await Addcollateral(managerIns,collateral0,priceObj,expiration1,0,amount,accounts[9]);
+        let oracleAddr = await managerIns.getOracleAddress();
+        let oracleInstance = await TestCompoundOracle.at(oracleAddr); 
+        await oracleInstance.setSellOptionsPrice(result.token,sellPrice);
+        await oracleInstance.setBuyOptionsPrice(result.token,buyPrice);
+        await oracleInstance.setSellOptionsPrice(result1.token,sellPrice);
+        await oracleInstance.setBuyOptionsPrice(result1.token,buyPrice);
+        await addMultiPayOrder(tradingInstance,result.token,collateral0,amount/4+1000,accounts);
+        await addMultiPayOrder(tradingInstance,result1.token,collateral0,amount/4+1000,accounts);
+        await addMultiSellOrder(tradingInstance,result.token,expiration,collateral0,amount/4+1000,accounts);
+        await addMultiSellOrder(tradingInstance,result1.token,expiration,collateral0,amount/4+1000,accounts);
+        let sellList = await tradingInstance.getSellOrderList(result.token,collateral0);
+        let payList = await tradingInstance.getPayOrderList(result.token,collateral0);
+        let object1 = {};
+        let token = await IERC20.at(result.token);
+        for (var i=0;i<6;i++){
+            let account = accounts[i+1];
+            console.log(sellList[2][i].toNumber(),payList[3][i].toNumber());
+            object1[account] = {
+                "sellToken":sellList[2][i].toNumber(),
+                "settle":payList[3][i].toNumber(),
+                "token": await token.balanceOf(account),
+                "balance": await web3.eth.getBalance(account),
+            }
+            console.log(object1[account].token.toNumber(),object1[account].balance);
+        }
+        await functionModule.sleep(60000);
+        await tradingInstance.returnExpiredOrders({from:accounts[9]});
+        let sellList1 = await tradingInstance.getSellOrderList(result.token,collateral0);
+        let payList1 = await tradingInstance.getPayOrderList(result.token,collateral0);
+        assert.equal(sellList1[0].length,0,"returnExpiredOrders test failed");
+        assert.equal(payList1[0].length,0,"returnExpiredOrders test failed");
+        for (var i=0;i<6;i++){
+            let account = accounts[i+1];
+            let tokenBal = await token.balanceOf(account);
+            console.log(tokenBal.toNumber());
+            let trans = tokenBal.sub(object1[account].token).toNumber();
+            assert.equal(trans,object1[account].sellToken,"returnExpiredOrders token balance test failed");
+            let bal = await web3.eth.getBalance(account);
+            assert(Math.abs(bal-object1[account].balance-object1[account].settle)<1000000);
+        }
+        let sellList2 = await tradingInstance.getSellOrderList(result1.token,collateral0);
+        let payList2 = await tradingInstance.getPayOrderList(result1.token,collateral0);
+        console.log(sellList2);
+        assert.equal(sellList2[0].length,6,"returnExpiredOrders test failed");
+        assert.equal(payList2[0].length,6,"returnExpiredOrders test failed");
     });
 });
 async function addPayOrder(tradingInstance,optionsAddr,settlements,buyAmount,account){
@@ -230,6 +298,7 @@ async function addMultiSellOrder(tradingInstance,optionsAddr,expiration,settleme
     let managerIns = await OptionsManager.at(managerAddress);    
     let token = await IERC20.at(optionsAddr);
     let mintAmount = 0;
+    let orderListPre = await tradingInstance.getSellOrderList(optionsAddr,settlements);
     for (var i=0;i<6;i++){
         let result = await Addcollateral(managerIns,collateral0,null,expiration,0,sellAmount,accounts[i+1],optionsAddr);
         await token.approve(tradingInstance.address,result.amount,{from:accounts[i+1]});

@@ -15,7 +15,7 @@ contract TransactionFee is AddressWhiteList {
     }
     // The total fees accumulated in the contract
     mapping (address => uint256) 	public managerFee;
-    // Number(10,-3) = 0.3%
+    // Number(3,-3) = 0.3%
     Number public transactionFee = Number(3, -3);
      /**
      * @dev Returns the rate of trasaction fee.

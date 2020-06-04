@@ -1,4 +1,6 @@
 const functionModule = require ("./testFunctions");
+var testCaseClass = require ("./testCases.js");
+var checkBalance = require ("./checkBalance.js");
 var OptionsManager = artifacts.require("OptionsManager");
 var TestCompoundOracle = artifacts.require("TestCompoundOracle");
 var IERC20 = artifacts.require("IERC20");
@@ -6,7 +8,9 @@ let collateral0 = "0x0000000000000000000000000000000000000000";
 let gasPrice = 20000000000;
 var OptionsFormulas = artifacts.require("OptionsFormulas");
 contract('OptionsManager', function (accounts){
+    let test1 = new testCaseClass();
     it('OptionsManager adding Collateral case one', async function (){
+        await test1.migrateOptionsManager();        
         let priceObj = {
             PriceList: [{
                 address:collateral0,
@@ -19,13 +23,13 @@ contract('OptionsManager', function (accounts){
         }
         let expiration = 3600;
         let amount = 1000000000;
-
+        test1.setOraclePrice(priceObj);
         console.log("call options adding collateral!");
-        await testAddcollateral(collateral0,priceObj,expiration,0,amount,accounts);
-        await testAddcollateralTwice(collateral0,priceObj,expiration,0,amount,accounts);
+        await testAddcollateral(collateral0,test1,expiration,0,amount,accounts);
+        await testAddcollateralTwice(collateral0,test1,expiration,0,amount,accounts[2]);
         console.log("put options adding collateral!");
-        await testAddcollateral(collateral0,priceObj,expiration,1,amount,accounts);
-        await testAddcollateralTwice(collateral0,priceObj,expiration,1,amount,accounts);
+        await testAddcollateral(collateral0,test1,expiration,1,amount,accounts);
+        await testAddcollateralTwice(collateral0,test1,expiration,1,amount,accounts[3]);
     });
     it('OptionsManager adding Collateral case two', async function (){
         let priceObj = {
@@ -40,12 +44,13 @@ contract('OptionsManager', function (accounts){
         }
         let expiration = 3600;
         let amount = 1000000000;
+        test1.setOraclePrice(priceObj);
         console.log("call options adding collateral!");
-        await testAddcollateral(collateral0,priceObj,expiration,0,amount,accounts);
-        await testAddcollateralTwice(collateral0,priceObj,expiration,0,amount,accounts);
+        await testAddcollateral(collateral0,test1,expiration,0,amount,accounts);
+        await testAddcollateralTwice(collateral0,test1,expiration,0,amount,accounts[2]);
         console.log("put options adding collateral!");
-        await testAddcollateral(collateral0,priceObj,expiration,1,amount,accounts);
-        await testAddcollateralTwice(collateral0,priceObj,expiration,1,amount,accounts);
+        await testAddcollateral(collateral0,test1,expiration,1,amount,accounts);
+        await testAddcollateralTwice(collateral0,test1,expiration,1,amount,accounts[3]);
     });
     it('OptionsManager adding Collateral case three', async function (){
         let priceObj = {
@@ -60,45 +65,32 @@ contract('OptionsManager', function (accounts){
         }
         let expiration = 3600;
         let amount = 1000000000;
+        test1.setOraclePrice(priceObj);
         console.log("call options adding collateral!");
-        await testAddcollateral(collateral0,priceObj,expiration,0,amount,accounts);
-        await testAddcollateralTwice(collateral0,priceObj,expiration,0,amount,accounts);
+        await testAddcollateral(collateral0,test1,expiration,0,amount,accounts);
+        await testAddcollateralTwice(collateral0,test1,expiration,0,amount,accounts[2]);
         console.log("put options adding collateral!");
-        await testAddcollateral(collateral0,priceObj,expiration,1,amount,accounts);
-        await testAddcollateralTwice(collateral0,priceObj,expiration,1,amount,accounts);
+        await testAddcollateral(collateral0,test1,expiration,1,amount,accounts);
+        await testAddcollateralTwice(collateral0,test1,expiration,1,amount,accounts[3]);
     });
 });
-async function testAddcollateral(collateral,priceObj,expiration,optType,amount,accounts){
-
-    var managerInstance = await functionModule.migrateOptionsManager();
-    let oracleAddr = await managerInstance.getOracleAddress();
-    await functionModule.SetOraclePrice(oracleAddr,priceObj);
-    let managerAddress = managerInstance.address;
-    let oracleInstance = await TestCompoundOracle.at(oracleAddr);
-    let currentPrice = await oracleInstance.getUnderlyingPrice(1);
-    let colPrice = await oracleInstance.getPrice(collateral);
-    let formulasAddr = await managerInstance.getFormulasAddress();
-    let formulasIns = await OptionsFormulas.at(formulasAddr);
-    assert(currentPrice>0, "Oracle get underlyingPrice error");
-    console.log(currentPrice,colPrice);
-    let strikePrices = functionModule.getTestStrikePrice(currentPrice,optType);
+async function testAddcollateral(collateral,testCase,expiration,optType,amount,accounts){
+    let underlyingAsset = 1;
+    let strikePrices = await testCase.getTestStrikePriceList(underlyingAsset,optType);
+    let checks = [new checkBalance([],testCase.oracle)];
+    for (var i=2;i<accounts.length;i++){
+        checks[0].addAccount(accounts[i]);
+    }
+    checks[0].addAccount(testCase.manager.address);
+   await checks[0].beforeFunction();
     for (var i = 0;i < strikePrices.length; i++) {
         let strikePrice = strikePrices[i];
-        let optionsaddress = await functionModule.OptionsManagerCreateOptionsToken(managerAddress,collateral,1,strikePrice,expiration,optType);
-        let CollateralPrice = functionModule.CalCollateralPrice(strikePrice,currentPrice,optType);
-        if (optType == 0){
-            let getPriceBn = await formulasIns.callCollateralPrice(strikePrice,currentPrice);
-            let getPrice = getPriceBn.toNumber();
-            assert(Math.abs(CollateralPrice-getPrice)<2,"CollateralPrice calculate error!");
-            CollateralPrice = getPrice;
-        }else{
-           let getPriceBn = await formulasIns.putCollateralPrice(strikePrice,currentPrice);
-            let getPrice = getPriceBn.toNumber();
-            assert(Math.abs(CollateralPrice-getPrice)<2,"CollateralPrice calculate error!");
-            CollateralPrice = getPrice;
-        }
-        let needMint = Math.floor(colPrice*amount/CollateralPrice);
-        console.log(CollateralPrice,needMint);
+        let token = await testCase.createOptionsToken(collateral,underlyingAsset,expiration,optType,strikePrice,checks[0]);
+        let ercToken = await IERC20.at(token.address);
+        let check1 = new checkBalance(checks[0].accounts,testCase.oracle,ercToken);
+        await check1.beforeFunction();
+        checks.push(check1);
+        let needMint = await testCase.calCollateralToMintAmount(token.address,amount,optType);
         let index = 1;
         for (var mintAmount = needMint+10;mintAmount>needMint-15;mintAmount-=10){
             let account = accounts[index];
@@ -107,53 +99,48 @@ async function testAddcollateral(collateral,priceObj,expiration,optType,amount,a
             if (mintAmount > needMint){
                 let txError = false;
                 try {
-                    let txResult = await functionModule.OptionsManagerAddCollateral(managerAddress,optionsaddress,collateral,amount,mintAmount,account);
+                    let txResult = await testCase.addCollateral(token.address,amount,mintAmount,account);
                 } catch (error) {
                     txError = true;
                 }
                 assert(txError,"test insufficient collateral failed!");
             }else{
-                let balance0 = await web3.eth.getBalance(account);
-                let txResult = await functionModule.OptionsManagerAddCollateral(managerAddress,optionsaddress,collateral,amount,mintAmount,account);
-                let gasUsed = txResult.receipt.gasUsed*gasPrice;
-                let balance1 = await web3.eth.getBalance(account);
-                let ethUsed = balance0-balance1;
-                assert(Math.abs(ethUsed-amount-gasUsed)<1000000,"AddCollateral balance error");    
+                let txResult = await testCase.addCollateral(token.address,amount,mintAmount,account);
+                await checks[0].setTx(txResult.tx);
+                checks[0].addAccountCheckValue(account,-amount);
+                checks[0].addAccountCheckValue(testCase.manager.address,amount);
+                check1.addAccountCheckValue(account,mintAmount);
             }
-
-        }
+        }        
+    }
+    for (var i=0;i<checks.length;i++){
+        await checks[i].checkFunction();
     }
 }
 
-async function testAddcollateralTwice(collateral,priceObj,expiration,optType,amount,accounts){
-    var managerInstance = await functionModule.migrateOptionsManager();
-    let oracleAddr = await managerInstance.getOracleAddress();
-    await functionModule.SetOraclePrice(oracleAddr,priceObj);
-    let managerAddress = managerInstance.address;
-    let oracleInstance = await TestCompoundOracle.at(oracleAddr);
-    let currentPrice = await oracleInstance.getUnderlyingPrice(1);
-    let colPrice = await oracleInstance.getPrice(collateral);
-    let formulasAddr = await managerInstance.getFormulasAddress();
-    let formulasIns = await OptionsFormulas.at(formulasAddr);
-    assert(currentPrice>0, "Oracle get underlyingPrice error");
-    console.log(currentPrice,colPrice);
-    let strikePrice = currentPrice;
-    let optionsaddress = await functionModule.OptionsManagerCreateOptionsToken(managerAddress,collateral,1,strikePrice,expiration,optType);
-    let CollateralPrice = functionModule.CalCollateralPrice(strikePrice,currentPrice,optType);
-    if (optType == 0){
-        let getPriceBn = await formulasIns.callCollateralPrice(strikePrice,currentPrice);
-        let getPrice = getPriceBn.toNumber();
-        assert(Math.abs(CollateralPrice-getPrice)<2,"CollateralPrice calculate error!");
-        CollateralPrice = getPrice;
-    }else{
-        let getPriceBn = await formulasIns.putCollateralPrice(strikePrice,currentPrice);
-        let getPrice = getPriceBn.toNumber();
-        assert(Math.abs(CollateralPrice-getPrice)<2,"CollateralPrice calculate error!");
-        CollateralPrice = getPrice;
-    }
-    let needMint = Math.floor(colPrice*amount/CollateralPrice);
-    console.log(CollateralPrice,needMint);
+async function testAddcollateralTwice(collateral,testCase,expiration,optType,amount,account){
+    let underlyingAsset = 1;
+    let ethCheck = new checkBalance([],testCase.oracle);
+    ethCheck.addAccount(account);
+    ethCheck.addAccount(testCase.manager.address);
+    await ethCheck.beforeFunction();
+    let strikePrice = await testCase.getStrikePrice(underlyingAsset,1.1);
+    let token = await testCase.createOptionsToken(collateral,underlyingAsset,expiration,optType,strikePrice,ethCheck);
+    let needMint = await testCase.calCollateralToMintAmount(token.address,amount,optType);
     let mintAmount = Math.floor(needMint/2);
-    await functionModule.OptionsManagerAddCollateral(managerAddress,optionsaddress,collateral,amount,mintAmount,accounts[2]);
-    await functionModule.OptionsManagerAddCollateral(managerAddress,optionsaddress,collateral,0,mintAmount,accounts[2]);
+    let ercToken = await IERC20.at(token.address);
+    let tokenCheck = new checkBalance(ethCheck.accounts,testCase.oracle,ercToken);
+    await tokenCheck.beforeFunction();
+    let txResult = await testCase.addCollateral(token.address,amount,mintAmount,account);
+    await ethCheck.setTx(txResult.tx);
+    tokenCheck.addAccountCheckValue(account,mintAmount);
+    ethCheck.addAccountCheckValue(account,-amount);
+    ethCheck.addAccountCheckValue(testCase.manager.address,amount);
+    txResult = await testCase.addCollateral(token.address,0,mintAmount,account);
+    await ethCheck.setTx(txResult.tx);
+    tokenCheck.addAccountCheckValue(account,mintAmount);
+
+    await ethCheck.checkFunction();
+    await tokenCheck.checkFunction();
+
 }

@@ -24,21 +24,29 @@ exports.migrateOptionsManager = async function(){
         return managerInstance;
     });
 }
-exports.migrateMatchMakingTrading = async function(){
+exports.migrateMatchMakingTrading = async function(managerInstance){
     return MatchMakingTrading.deployed().then(async function (instance){
         let matchInstance = instance;
         console.log("MatchMakingTrading Address : ", instance.address);
-        let managerInstance = await exports.migrateOptionsManager();
+        if (!managerInstance){
+            managerInstance = await exports.migrateOptionsManager();
+        }
         await matchInstance.setOptionsManagerAddress(managerInstance.address);
         let oracleAddr = await managerInstance.getOracleAddress();
         await matchInstance.setOracleAddress(oracleAddr);
         return matchInstance;
     });
 }
-exports.OptionsManagerCreateOptionsToken = async function(managerAddress,collateral,underlyingAssets,strikePrice,expiration,optType){
+exports.OptionsManagerCreateOptionsToken = async function(managerAddress,collateral,underlyingAssets,strikePrice,expiration,optType,checkbalance){
     let managerInstance = await OptionsManager.at(managerAddress);
-    await managerInstance.addWhiteList(collateral);
-    await managerInstance.createOptionsToken("options token 1",collateral,underlyingAssets,strikePrice,expiration,optType);
+    let result = await managerInstance.addWhiteList(collateral);
+    if(checkbalance){
+        await checkbalance.setTx(result.tx);
+    }
+    result = await managerInstance.createOptionsToken("options token 1",collateral,underlyingAssets,strikePrice,expiration,optType);
+    if(checkbalance){
+        await checkbalance.setTx(result.tx);
+    }
     let options = await managerInstance.getOptionsTokenList();
     let value = await managerInstance.getOptionsTokenInfo(options[options.length-1]);
     console.log(value[4].toNumber());
@@ -101,6 +109,13 @@ exports.getTestStrikePrice = function(currentPrice,optType) {
         return [Math.floor(currentPrice*2),Math.floor(currentPrice*1.05/0.7),Math.floor(currentPrice*1.05/1.1),Math.floor(currentPrice*0.9/1.1),Math.floor(currentPrice*0.3)];
     }
 }
+exports.sleep = function(time) {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        resolve();
+      }, time);
+    });
+};
 function CalCallCollateral(stickPrice , currentPrice){
     if(currentPrice<stickPrice*0.9){
         return _calCallLowerSegment(stickPrice,currentPrice);
