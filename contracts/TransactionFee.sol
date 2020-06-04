@@ -8,7 +8,7 @@ import "./IERC20.sol";
 contract TransactionFee is AddressWhiteList {
     using SafeMath for uint256;
     /* represents floting point numbers, where number = value * 10 ** exponent
-    i.e 0.1 = 10 * 10 ** -3 */
+    i.e 0.1 = 10 * 10 ** -2 */
     struct Number {
         uint256 value;
         int32 exponent;

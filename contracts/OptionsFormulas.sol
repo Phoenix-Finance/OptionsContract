@@ -2,10 +2,13 @@ pragma solidity ^0.4.26;
 
 import "./Ownable.sol";
 import "./SafeMath.sol";
-
+import "./OptionsToken.sol";
 interface IOptFormulas {
     function callCollateralPrice(uint256 _strikePrice,uint256 _currentPrice)external view returns(uint256);
     function putCollateralPrice(uint256 _strikePrice,uint256 _currentPrice)external view returns(uint256);
+    function createNewToken(uint256 expiration,string optionsTokenName)external returns(address);
+    function calculateMaxMintAmount(uint256 collateralPrice,uint256 collateralAmount,uint256 strikePrice,uint256 underlyingPrice,uint8 optType)
+            external returns (uint256);
 }
 
 contract OptionsFormulas is Ownable{
@@ -209,7 +212,24 @@ contract OptionsFormulas is Ownable{
     function putCollateralPrice(uint256 _strikePrice,uint256 _currentPrice)public view returns(uint256){
         return _calCollateralPrice(putCollateral,_strikePrice,_currentPrice);
     }
-
+    function createNewToken(uint256 expiration,string optionsTokenName)public returns(address){
+        OptionsToken optionsToken = new OptionsToken(expiration,optionsTokenName);
+        optionsToken.setManager(msg.sender);
+        optionsToken.transferOwnership(msg.sender);
+        return optionsToken;
+    }
+    function calculateMaxMintAmount(uint256 collateralPrice,uint256 collateralAmount,uint256 strikePrice,uint256 underlyingPrice,uint8 optType)
+            public view returns (uint256){
+        uint256 collateralValue = collateralAmount.mul(collateralPrice);
+        uint256 needCollateral = 0;
+        if (optType == 0){
+            needCollateral = callCollateralPrice(strikePrice,underlyingPrice);
+            return collateralValue.div(needCollateral);
+        }else{
+            needCollateral = putCollateralPrice(strikePrice,underlyingPrice);
+            return collateralValue.div(needCollateral);
+        }
+    }
     //******************************Internal functions******************************************
     function _calNumberMulUint(Number number,uint256 value) internal pure returns (uint256,bool){
         bool bSignFlag = true;

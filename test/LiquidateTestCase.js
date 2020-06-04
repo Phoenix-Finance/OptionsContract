@@ -30,7 +30,8 @@ contract('OptionsManager', function (accounts){
         await testCase.oracle.setUnderlyingPrice(underlyingAsset,underlyingPrice);
         newPrice = Math.floor(underlyingPrice*0.4);
         await testNormalLiquidate(collateral0,testCase,expiration,1,amount,newPrice,accounts);
-        await testExercise(testCase);
+//        await functionModule.sleep(60000);
+//        await testExercise(testCase);
     });
  
 });

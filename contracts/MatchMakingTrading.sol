@@ -83,7 +83,9 @@ contract MatchMakingTrading is TransactionFee {
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         uint256 tokenPrice = _oracle.getSellOptionsPrice(optionsToken);
         uint256 currencyPrice = _oracle.getPrice(settlementsCurrency);
-        var (optionsPay,transFee) = _calPayment(buyAmount,tokenPrice,currencyPrice);
+        uint256 optionsPay;
+        uint256 transFee;
+        (optionsPay,transFee) = _calPayment(buyAmount,tokenPrice,currencyPrice);
         uint256 settlements = deposit;
         if (settlementsCurrency == address(0)){
             settlements = msg.value;
@@ -360,7 +362,9 @@ contract MatchMakingTrading is TransactionFee {
         delete payOrderMap[settlementsCurrency][optionsToken];
     }
     function isEligibleOptionsToken(address optionsToken) public view returns(bool) {
-        var (,,,,expiration,exercised) = _optionsManager.getOptionsTokenInfo(optionsToken);
+        uint256 expiration;
+        bool exercised;
+        (,,,,expiration,exercised) = _optionsManager.getOptionsTokenInfo(optionsToken);
         uint256 tradingEnd = _tradingEnd.add(now);
         return (expiration > 0 && tradingEnd < expiration && !exercised);
     }
