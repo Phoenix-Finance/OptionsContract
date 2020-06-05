@@ -152,16 +152,13 @@ contract OptionsVault is TransactionFee
 }
 contract OptionsManager is OptionsVault {
     using SafeMath for uint256;
-        constructor() public {
-        
-    }
     IOptFormulas internal _optionsFormulas;
     ICompoundOracle internal _oracle;
     uint256 private _calDecimal = 10000000000;
     // Number(2,-1) = 20%
     Number public liquidationIncentive = Number(2, -1);
     
-    event CreateOptions (address indexed collateral,address indexed tokenAddress, uint32 indexed underlyingAssets,uint256 strikePrice,uint256 expiration,uint8 optType);
+    event CreateOptions(address indexed collateral,address indexed tokenAddress, uint32 indexed underlyingAssets,uint256 strikePrice,uint256 expiration,uint8 optType);
     event AddCollateral(address indexed optionsToken,uint256 indexed amount,uint256 mintOptionsTokenAmount);
     event WithdrawCollateral(address indexed optionsToken,uint256 amount);
     event Exercise(address indexed Sender,address indexed optionsToken);
@@ -189,6 +186,7 @@ contract OptionsManager is OptionsVault {
         liquidationIncentive.value = value;
         liquidationIncentive.exponent = exponent;
     }
+
     /**
         * @dev  create an empty options token by owner;
         * @param optionsTokenName new migration options token name;
@@ -212,7 +210,6 @@ contract OptionsManager is OptionsVault {
         assert(newToken != 0);
         _insert(newToken,OptionsType(optType),collateral,underlyingAssets,expiration,strikePrice);
         emit CreateOptions(collateral,newToken,underlyingAssets,strikePrice,expiration,optType);
-        
     }
      /**
         * @dev  add Collateral. Any writer can add collateral to an exist options token,and mint options token;
@@ -327,38 +324,60 @@ contract OptionsManager is OptionsVault {
         if (!_isExpired(optionsItem) || _isExercised(optionsItem)){
             return;
         }
-        emit DebugEvent(2222,2222,optionsItem.writers.length);
         if (optionsItem.writers.length == 0) {
             optionsItem.options.isExercised = true;
             _remove(tokenAddress);
             return;
         }
-        emit DebugEvent(3333,3333,optionsItem.writers.length);
         optionsItem.options.isExercised = true;
         uint256 i=0;
+        uint256 value;
+        IERC20 collateralToken = IERC20(optionsItem.options.collateralCurrency);
         //calculate tokenPayback
         uint256 tokenPayback = _calExerciseTokenPayback(tokenAddress,optionsItem);
+        emit DebugEvent(2222,tokenPayback,2222);
         if (tokenPayback > 0 ){
             //calculate balance pay back
-            OptionsWriter[] storage writers = optionsMap[tokenAddress].writers;
             IIterableToken iterToken = IIterableToken(tokenAddress);
-            for (uint keyIndex = iterToken.iterate_balance_start();
-                iterToken.iterate_balance_valid(keyIndex);
-                keyIndex = iterToken.iterate_balance_next(keyIndex)){
-                address addr;
-                uint256 balance;
-                (addr,balance) = iterToken.iterate_balance_get(keyIndex);
-                i = _findWriter(tokenAddress,addr);
-                if (i == writers.length){ //not writer
-                    uint256 _payback = balance.mul(tokenPayback).div(_calDecimal);
-                    _transferPayback(addr,optionsItem.options.collateralCurrency,_payback);
+            address[] memory accounts;
+            uint256[] memory balances;
+            (accounts,balances) = iterToken.getAccountsAndBalances();
+            if (optionsItem.options.collateralCurrency == address(0)){
+                for (i=0;i<accounts.length;i++){
+                    if (balances[i]>0){
+                        value = _findWriter(tokenAddress,accounts[i]);
+                        if (value == optionsItem.writers.length){ //not writer
+                            value = balances[i].mul(tokenPayback).div(_calDecimal);
+                            emit DebugEvent(3333,i,value);
+                            accounts[i].transfer(value);
+                        }
+                    }
+                }
+            }else{
+                for (i=0;i<accounts.length;i++){
+                    if (balances[i]>0){
+                        value = _findWriter(tokenAddress,accounts[i]);
+                        if (value == optionsItem.writers.length){ //not writer
+                            value = balances[i].mul(tokenPayback).div(_calDecimal);
+                            collateralToken.transfer(accounts[i],value);
+                        }
+                    }
                 }
             }
         }
-        return;
         //return Collateral
-        for (i=0;i<writers.length;i++){
-            _transferPayback(writers[i].writer,optionsItem.options.collateralCurrency,writers[i].collateralAmount);
+        if (optionsItem.options.collateralCurrency == address(0)){
+            for (i=0;i<optionsItem.writers.length;i++){
+                if (optionsItem.writers[i].collateralAmount > 0){
+                    optionsItem.writers[i].writer.transfer(optionsItem.writers[i].collateralAmount);
+                }
+            }
+        }else{
+            for (i=0;i<optionsItem.writers.length;i++){
+                if (optionsItem.writers[i].collateralAmount > 0){
+                   collateralToken.transfer(optionsItem.writers[i].writer,optionsItem.writers[i].collateralAmount);
+                }
+            }
         }
         _remove(tokenAddress);
         emit Exercise(msg.sender,tokenAddress);        
@@ -388,7 +407,7 @@ contract OptionsManager is OptionsVault {
         //calculate tokenPayback
         uint256 underlyingPrice = _oracle.getUnderlyingPrice(optionsItem.options.underlyingAssets);
         uint256 tokenPayback = 0;
-        
+        emit DebugEvent(4444,underlyingPrice,optionsItem.options.strikePrice);
         if (optionsItem.options.optType == OptionsType.OptCall){
             if (underlyingPrice > optionsItem.options.strikePrice){
                 tokenPayback = underlyingPrice.sub(optionsItem.options.strikePrice);
@@ -428,6 +447,9 @@ contract OptionsManager is OptionsVault {
         emit DebugEvent(9,allTransFee,totalSuply);
         //assert iterToken.gettotalsuply != totalsuply
         _addTransactionFee(optionsItem.options.collateralCurrency, allTransFee);
+        if (totalSuply == 0){
+            return 0;
+        }
         tokenPayback = allPayback.mul(_calDecimal).div(totalSuply);    
         return tokenPayback;
     }

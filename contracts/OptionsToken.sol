@@ -39,6 +39,20 @@ contract BalanceMapping is IIterableToken
         _balances.size --;
         return true;
     }
+    function getAccountsAndBalances()public view returns (address[],uint256[]){
+        address[] memory accounts = new address[](_balances.size);
+        uint256[] memory balances = new uint256[](_balances.size);
+        uint256 keyIndex = 0;
+        for (uint256 i=0;i<_balances.keys.length;i++){
+            if(_balances.keys[keyIndex].deleted){
+                continue;
+            }
+            accounts[keyIndex] = _balances.keys[keyIndex].key;
+            balances[keyIndex] = _balances.data[accounts[keyIndex]].value;
+            keyIndex++;
+        }
+        return (accounts,balances);
+    } 
     function contains(address key)public view returns (bool)
     {
         return _balances.data[key].keyIndex > 0;
