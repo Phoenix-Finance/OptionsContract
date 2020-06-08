@@ -253,7 +253,6 @@ contract OptionsManager is OptionsVault {
         for (uint keyIndex = _iterate_start();_iterate_valid(keyIndex);keyIndex = _iterate_next(keyIndex)){
             IndexValue storage optionsItem = optionsMap[optionsTokenList[keyIndex].key];
             _exercise(optionsTokenList[keyIndex].key,optionsItem);
-            break;
         }
     }
     /**

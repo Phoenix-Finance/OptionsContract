@@ -9,7 +9,6 @@ let underlyingAsset = 1;
 var OptionsFormulas = artifacts.require("OptionsFormulas");
 contract('OptionsManager', function (accounts){
     let testCase = new testCaseClass();
-    /*
     it('OptionsManager liquidate test case one', async function (){
         await testCase.migrateOptionsManager();
         let underlyingPrice = 100000;        
@@ -28,13 +27,13 @@ contract('OptionsManager', function (accounts){
         testCase.setOraclePrice(priceObj);
         let newPrice = Math.floor(underlyingPrice*1.7);
         await testNormalLiquidate(collateral0,testCase,expiration,0,amount,newPrice,accounts);
-//        await testCase.oracle.setUnderlyingPrice(underlyingAsset,underlyingPrice);
-//        newPrice = Math.floor(underlyingPrice*0.4);
-//        await testNormalLiquidate(collateral0,testCase,expiration,1,amount,newPrice,accounts);
+        await testCase.oracle.setUnderlyingPrice(underlyingAsset,underlyingPrice);
+        newPrice = Math.floor(underlyingPrice*0.4);
+        await testNormalLiquidate(collateral0,testCase,expiration,1,amount,newPrice,accounts);
         await functionModule.sleep(60000);
         await testExercise(testCase);
     });
-    */
+    
     it('OptionsManager exercise test case one', async function (){
         await testCase.migrateOptionsManager();
         let underlyingPrice = 100000;        
