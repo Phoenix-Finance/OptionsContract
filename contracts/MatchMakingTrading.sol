@@ -108,9 +108,7 @@ contract MatchMakingTrading is TransactionFee {
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         uint256 tokenPrice = _oracle.getSellOptionsPrice(optionsToken);
         uint256 currencyPrice = _oracle.getPrice(settlementCurrency);
-        uint256 optionsPay;
-        uint256 transFee;
-        (optionsPay,transFee) = _calPayment(buyAmount,tokenPrice,currencyPrice);
+        (uint256 optionsPay, uint256 transFee) = _calPayment(buyAmount,tokenPrice,currencyPrice);
         uint256 settlements = deposit;
         if (settlementCurrency == address(0)){
             settlements = msg.value;
@@ -213,9 +211,7 @@ contract MatchMakingTrading is TransactionFee {
         if (settlementCurrency == address (0)) {
             currencyAmount = msg.value;
         }
-        uint256 allPay = 0;
-        uint256 transFee = 0;
-        (allPay,transFee) = _calPayment(amount,tokenPrice,currencyPrice);
+        (uint256 allPay,uint256 transFee) = _calPayment(amount,tokenPrice,currencyPrice);
         require(allPay.add(transFee)<=currencyAmount,"pay value is insufficient!");
         uint256 _totalBuy = 0;
         SellOptionsOrder[] storage orderList = sellOrderMap[settlementCurrency][optionsToken];
@@ -268,9 +264,7 @@ contract MatchMakingTrading is TransactionFee {
             }
 
             amount = amount.sub(optionsAmount);            
-            uint256 sellAmount = 0;
-            uint256 leftCurrency = 0;
-            (sellAmount,leftCurrency) = _orderTrading(optionsToken,optionsAmount,tokenPrice,settlementCurrency,orderList[i].settlementsAmount,currencyPrice,
+            (uint256 sellAmount,uint256 leftCurrency) = _orderTrading(optionsToken,optionsAmount,tokenPrice,settlementCurrency,orderList[i].settlementsAmount,currencyPrice,
             msg.sender,orderList[i].owner);
             _totalSell = _totalSell.add(sellAmount);
             emit DebugEvent(2,amount,_totalSell);
@@ -305,9 +299,7 @@ contract MatchMakingTrading is TransactionFee {
     function _orderTrading(address optionsToken,uint256 amount,uint256 optionsPrice,
             address settlementCurrency,uint256 currencyAmount,uint256 currencyPrice,
             address seller,address buyer) internal returns (uint256,uint256) {
-        uint256 optionsPay = 0;
-        uint256 transFee = 0;
-        (optionsPay,transFee) = _calPayment(amount,optionsPrice,currencyPrice);
+        (uint256 optionsPay,uint256 transFee) = _calPayment(amount,optionsPrice,currencyPrice);
         if (optionsPay.add(transFee)>currencyAmount){
             return (0,currencyAmount);
         }
@@ -374,9 +366,7 @@ contract MatchMakingTrading is TransactionFee {
         }
     }
     function _isSufficientSettlements(PayOptionsOrder storage payOrder,uint256 optionsPrice,uint256 currencyPrice) internal view returns(bool){
-        uint256 allPay = 0;
-        uint256 transFee = 0;
-        (allPay,transFee) = _calPayment(payOrder.amount,optionsPrice,currencyPrice);
+        (uint256 allPay,uint256 transFee) = _calPayment(payOrder.amount,optionsPrice,currencyPrice);
         if (allPay.add(transFee) > payOrder.settlementsAmount){
             return false;
         }
@@ -419,9 +409,7 @@ contract MatchMakingTrading is TransactionFee {
         delete payOrderMap[settlementCurrency][optionsToken];
     }
     function isEligibleOptionsToken(address optionsToken) public view returns(bool) {
-        uint256 expiration;
-        bool exercised;
-        (,,,,expiration,exercised) = _optionsManager.getOptionsTokenInfo(optionsToken);
+        (,,,,uint256 expiration,bool exercised) = _optionsManager.getOptionsTokenInfo(optionsToken);
         uint256 tradingEnd = _tradingEnd.add(now);
         return (expiration > 0 && tradingEnd < expiration && !exercised);
     }

@@ -221,42 +221,22 @@ contract OptionsFormulas is Ownable{
     function calculateMaxMintAmount(uint256 collateralPrice,uint256 collateralAmount,uint256 strikePrice,uint256 underlyingPrice,uint8 optType)
             public view returns (uint256){
         uint256 collateralValue = collateralAmount.mul(collateralPrice);
-        uint256 needCollateral = 0;
-        if (optType == 0){
-            needCollateral = callCollateralPrice(strikePrice,underlyingPrice);
-            return collateralValue.div(needCollateral);
-        }else{
-            needCollateral = putCollateralPrice(strikePrice,underlyingPrice);
-            return collateralValue.div(needCollateral);
-        }
+        uint256 needCollateral = (optType == 0) ? callCollateralPrice(strikePrice,underlyingPrice) : putCollateralPrice(strikePrice,underlyingPrice);
+        return collateralValue.div(needCollateral);
     }
     //******************************Internal functions******************************************
     function _calNumberMulUint(Number number,uint256 value) internal pure returns (uint256,bool){
-        bool bSignFlag = true;
-        uint256 result;
-        if (number.value < 0){
-            bSignFlag = false;
-            result = uint256(-1*number.value).mul(value);
-        }else{
-            result = uint256(number.value).mul(value);
-        }
-        if (number.exponent > 0) {
-            result = result.mul(10**uint256(number.exponent));
-        } else {
-            result = result.div(10**uint256(-1*number.exponent));
-        }
+        bool bSignFlag = number.value >= 0;
+        uint256 result = bSignFlag ? uint256(number.value).mul(value) : uint256(-1*number.value).mul(value);
+        result = number.exponent > 0 ? result.mul(10**uint256(number.exponent)) : result.div(10**uint256(-1*number.exponent));
         return (result , bSignFlag);
     }
     function _calSegmentPrice(CollateralSegment storage _segment,uint256 _strikePrice,uint256 _currentPrice)
             internal view
             returns (uint256){
         uint256 result;
-        uint256 strikeResult;
-        bool strikeSign;
-        (strikeResult,strikeSign) = _calNumberMulUint(_segment.strikeSlope,_strikePrice);
-        uint256 priceResult;
-        bool priceSign;
-        (priceResult,priceSign) = _calNumberMulUint(_segment.priceSlope,_currentPrice);
+        (uint256 strikeResult,bool strikeSign) = _calNumberMulUint(_segment.strikeSlope,_strikePrice);
+        (uint256 priceResult,bool priceSign) = _calNumberMulUint(_segment.priceSlope,_currentPrice);
         if (strikeSign && priceSign){
             result = strikeResult.add(priceResult);
         }else if(strikeSign){
@@ -280,13 +260,9 @@ contract OptionsFormulas is Ownable{
             internal view
             returns (uint256){
         uint256 result;
-        uint256 lowerDemarcation;
-        bool lowerSign;
-        (lowerDemarcation,lowerSign) = _calNumberMulUint(_collateral.lowerDemarcation,_strikePrice);
+        (uint256 lowerDemarcation,bool lowerSign) = _calNumberMulUint(_collateral.lowerDemarcation,_strikePrice);
         assert(lowerSign);
-        uint256 upperDemarcation;
-        bool upperSign;
-        (upperDemarcation,upperSign) = _calNumberMulUint(_collateral.upperDemarcation,_strikePrice);
+        (uint256 upperDemarcation,bool upperSign) = _calNumberMulUint(_collateral.upperDemarcation,_strikePrice);
         assert(upperSign);
         if (_currentPrice > upperDemarcation){
             result = _calSegmentPrice(_collateral.upperSegment,_strikePrice,_currentPrice);
@@ -295,9 +271,7 @@ contract OptionsFormulas is Ownable{
         }else{
             result = _calSegmentPrice(_collateral.lowerSegment,_strikePrice,_currentPrice);
         }
-        uint256 lowerLimit;
-        bool limitSign;
-        (lowerLimit,limitSign) = _calNumberMulUint(_collateral.lowerLimit,_strikePrice);
+        (uint256 lowerLimit,bool limitSign) = _calNumberMulUint(_collateral.lowerLimit,_strikePrice);
         assert(limitSign);
         if (result<lowerLimit){
             result = lowerLimit;

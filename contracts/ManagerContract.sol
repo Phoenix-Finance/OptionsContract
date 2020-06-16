@@ -281,7 +281,7 @@ contract OptionsManager is OptionsVault {
         uint256 incentive = _calNumberMulUint(liquidationIncentive,_payback);
         _payback = _payback.add(incentive);
         uint256 _transFee;
-        (_payback,_transFee) = _calSufficientPayback(_payback,optionsItem.writers[i].collateralAmount);
+        (_payback, _transFee) = _calSufficientPayback(_payback,optionsItem.writers[i].collateralAmount);
         optionsItem.writers[i].collateralAmount = optionsItem.writers[i].collateralAmount.sub(_payback);
         optionsItem.writers[i].collateralAmount = optionsItem.writers[i].collateralAmount.sub(_transFee);
         _addTransactionFee(optionsItem.options.collateralCurrency,_transFee);
@@ -338,9 +338,7 @@ contract OptionsManager is OptionsVault {
         if (tokenPayback > 0 ){
             //calculate balance pay back
             IIterableToken iterToken = IIterableToken(tokenAddress);
-            address[] memory accounts;
-            uint256[] memory balances;
-            (accounts,balances) = iterToken.getAccountsAndBalances();
+            (address[] memory accounts,uint256[] memory  balances) = iterToken.getAccountsAndBalances();
             if (optionsItem.options.collateralCurrency == address(0)){
                 for (i=0;i<accounts.length;i++){
                     if (balances[i]>0){
