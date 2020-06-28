@@ -21,7 +21,7 @@ contract('OptionsManager', function (accounts){
                 price:100000,
             }]
         }
-        let expiration = 3600;
+        let expiration = Math.floor(Date.now()/1000)+3600;
         let amount = 1000000000;
         test1.setOraclePrice(priceObj);
         console.log("call options adding collateral!");
@@ -42,7 +42,7 @@ contract('OptionsManager', function (accounts){
                 price:1000000,
             }]
         }
-        let expiration = 3600;
+        let expiration = Math.floor(Date.now()/1000)+3600;
         let amount = 1000000000;
         test1.setOraclePrice(priceObj);
         console.log("call options adding collateral!");
@@ -63,7 +63,7 @@ contract('OptionsManager', function (accounts){
                 price:100000,
             }]
         }
-        let expiration = 3600;
+        let expiration = Math.floor(Date.now()/1000)+3600;
         let amount = 1000000000;
         test1.setOraclePrice(priceObj);
         console.log("call options adding collateral!");

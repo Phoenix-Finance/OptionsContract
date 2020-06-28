@@ -16,7 +16,7 @@ contract('MatchMakingTrading', function (accounts){
                 price:94933900,
             }]
         }
-        let expiration = 36000;
+        let expiration = Math.floor(Date.now()/1000)+36000;
         let amount = 10000000000;
         let sellPrice = 990000;
         let buyPrice = 1010000;
@@ -46,7 +46,7 @@ contract('MatchMakingTrading', function (accounts){
                 price:1000000,
             }]
         }
-        let expiration = 36000;
+        let expiration = Math.floor(Date.now()/1000)+36000;
         let amount = 1000000000;
         let sellPrice = 990000;
         let buyPrice = 1010000;
@@ -91,7 +91,7 @@ contract('MatchMakingTrading', function (accounts){
                 price:1000000,
             }]
         }
-        let expiration = 36000;
+        let expiration = Math.floor(Date.now()/1000)+36000;
         let amount = 1000000000;
         let sellPrice = 990000;
         let buyPrice = 1010000;
@@ -129,8 +129,8 @@ contract('MatchMakingTrading', function (accounts){
                 price:1000000,
             }]
         }
-        let expiration = 18000+60;
-        let expiration1 = 36000;
+        let expiration = Math.floor(Date.now()/1000)+18000+60;
+        let expiration1 = Math.floor(Date.now()/1000)+36000;
         let amount = 1000000000;
         let sellPrice = 990000;
         let buyPrice = 1010000;

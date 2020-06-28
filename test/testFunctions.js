@@ -49,7 +49,7 @@ exports.OptionsManagerCreateOptionsToken = async function(managerAddress,collate
     }
     let options = await managerInstance.getOptionsTokenList();
     let value = await managerInstance.getOptionsTokenInfo(options[options.length-1]);
-    console.log(value[4].toNumber());
+    console.log(options);
     return options[options.length-1];
 }
 exports.OptionsManagerGetFirstOptionsToken = async function(managerAddress,collateral,underlyingAssets,strikePrice,expiration,optType){

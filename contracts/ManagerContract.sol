@@ -204,7 +204,7 @@ contract OptionsManager is OptionsVault {
     public onlyOwner{
         require(underlyingAssets>0 , "underlying cannot be zero");
         require(isEligibleAddress(collateral) , "It is unsupported token");
-        expiration = expiration.add(now);
+//        expiration = expiration.add(now);
         //new OptionsToken(expiration,optionsTokenName);
         address newToken = _optionsFormulas.createNewToken(expiration,optionsTokenName);
         assert(newToken != 0);

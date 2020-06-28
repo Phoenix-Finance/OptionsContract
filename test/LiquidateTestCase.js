@@ -22,7 +22,7 @@ contract('OptionsManager', function (accounts){
                 price:underlyingPrice,
             }]
         }
-        let expiration = 60;
+        let expiration = Math.floor(Date.now()/1000)+60;
         let amount = 1000000000;
         testCase.setOraclePrice(priceObj);
         let newPrice = Math.floor(underlyingPrice*1.7);
@@ -47,7 +47,7 @@ contract('OptionsManager', function (accounts){
                 price:underlyingPrice,
             }]
         }
-        let expiration = 60;
+        let expiration = Math.floor(Date.now()/1000)+60;
         let amount = 1000000000;
         testCase.setOraclePrice(priceObj);
         let newPrice = Math.floor(underlyingPrice*1.2);
