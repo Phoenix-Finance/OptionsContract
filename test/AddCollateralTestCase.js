@@ -1,8 +1,10 @@
 const functionModule = require ("./testFunctions");
 var testCaseClass = require ("./testCases.js");
 var checkBalance = require ("./checkBalance.js");
+const BN = require("bn.js");
 var OptionsManager = artifacts.require("OptionsManager");
 var TestCompoundOracle = artifacts.require("TestCompoundOracle");
+var FNXCoin = artifacts.require("FNXCoin");
 var IERC20 = artifacts.require("IERC20");
 let collateral0 = "0x0000000000000000000000000000000000000000";
 let gasPrice = 20000000000;
@@ -24,6 +26,7 @@ contract('OptionsManager', function (accounts){
         let expiration = Math.floor(Date.now()/1000)+3600;
         let amount = 1000000000;
         test1.setOraclePrice(priceObj);
+        let mint = await test1.formulas.calculateMaxMintAmount(10000000,10000000,100000,100000,1);
         console.log("call options adding collateral!");
         await testAddcollateral(collateral0,test1,expiration,0,amount,accounts);
         await testAddcollateralTwice(collateral0,test1,expiration,0,amount,accounts[2]);
@@ -31,6 +34,39 @@ contract('OptionsManager', function (accounts){
         await testAddcollateral(collateral0,test1,expiration,1,amount,accounts);
         await testAddcollateralTwice(collateral0,test1,expiration,1,amount,accounts[3]);
     });
+    it('OptionsManager adding Token Collateral case one', async function (){
+        await test1.migrateOptionsManager();  
+        let fnxToken = await FNXCoin.deployed();     
+        let mintAmount = new BN("10000000000000000000000000",10)
+        for (var i=0;i<accounts.length;i++){
+            await fnxToken.mint(accounts[i],mintAmount);
+        }
+        
+        let priceObj = {
+            PriceList: [{
+                address:collateral0,
+                price:100000,
+            },{
+                address:fnxToken.address,
+                price:100000,
+            }],
+            underlyingAssets:[{
+                id:1,
+                price:100000,
+            }]
+        }
+        let expiration = Math.floor(Date.now()/1000)+3600;
+        let amount = 1000000000;
+        test1.setOraclePrice(priceObj);
+        let mint = await test1.formulas.calculateMaxMintAmount(10000000,10000000,100000,100000,1);
+        console.log("call options adding collateral!");
+        await testAddcollateral(fnxToken.address,test1,expiration,0,amount,accounts);
+        await testAddcollateralTwice(fnxToken.address,test1,expiration,0,amount,accounts[2]);
+        console.log("put options adding collateral!");
+        await testAddcollateral(fnxToken.address,test1,expiration,1,amount,accounts);
+        await testAddcollateralTwice(fnxToken.address,test1,expiration,1,amount,accounts[3]);
+    });
+    return
     it('OptionsManager adding Collateral case two', async function (){
         let priceObj = {
             PriceList: [{
@@ -66,6 +102,7 @@ contract('OptionsManager', function (accounts){
         let expiration = Math.floor(Date.now()/1000)+3600;
         let amount = 1000000000;
         test1.setOraclePrice(priceObj);
+
         console.log("call options adding collateral!");
         await testAddcollateral(collateral0,test1,expiration,0,amount,accounts);
         await testAddcollateralTwice(collateral0,test1,expiration,0,amount,accounts[2]);
@@ -77,7 +114,10 @@ contract('OptionsManager', function (accounts){
 async function testAddcollateral(collateral,testCase,expiration,optType,amount,accounts){
     let underlyingAsset = 1;
     let strikePrices = await testCase.getTestStrikePriceList(underlyingAsset,optType);
-    let checks = [new checkBalance([],testCase.oracle)];
+    let checks = [new checkBalance("collateral",[],testCase.oracle)];
+    if (collateral != collateral0){
+        checks[0].token = await IERC20.at(collateral); 
+    }
     for (var i=2;i<accounts.length;i++){
         checks[0].addAccount(accounts[i]);
     }
@@ -87,7 +127,7 @@ async function testAddcollateral(collateral,testCase,expiration,optType,amount,a
         let strikePrice = strikePrices[i];
         let token = await testCase.createOptionsToken(collateral,underlyingAsset,expiration,optType,strikePrice,checks[0]);
         let ercToken = await IERC20.at(token.address);
-        let check1 = new checkBalance(checks[0].accounts,testCase.oracle,ercToken);
+        let check1 = new checkBalance("token "+i,checks[0].accounts,testCase.oracle,ercToken);
         await check1.beforeFunction();
         checks.push(check1);
         let needMint = await testCase.calCollateralToMintAmount(token.address,amount,optType);
@@ -106,7 +146,7 @@ async function testAddcollateral(collateral,testCase,expiration,optType,amount,a
                 assert(txError,"test insufficient collateral failed!");
             }else{
                 let txResult = await testCase.addCollateral(token.address,amount,mintAmount,account);
-                await checks[0].setTx(txResult.tx);
+                await checks[0].setTx(txResult);
                 checks[0].addAccountCheckValue(account,-amount);
                 checks[0].addAccountCheckValue(testCase.manager.address,amount);
                 check1.addAccountCheckValue(account,mintAmount);
@@ -120,7 +160,10 @@ async function testAddcollateral(collateral,testCase,expiration,optType,amount,a
 
 async function testAddcollateralTwice(collateral,testCase,expiration,optType,amount,account){
     let underlyingAsset = 1;
-    let ethCheck = new checkBalance([],testCase.oracle);
+    let ethCheck = new checkBalance("collateral",[],testCase.oracle);
+    if (collateral != collateral0){
+        ethCheck.token = await IERC20.at(collateral); 
+    }
     ethCheck.addAccount(account);
     ethCheck.addAccount(testCase.manager.address);
     await ethCheck.beforeFunction();
@@ -129,15 +172,15 @@ async function testAddcollateralTwice(collateral,testCase,expiration,optType,amo
     let needMint = await testCase.calCollateralToMintAmount(token.address,amount,optType);
     let mintAmount = Math.floor(needMint/2);
     let ercToken = await IERC20.at(token.address);
-    let tokenCheck = new checkBalance(ethCheck.accounts,testCase.oracle,ercToken);
+    let tokenCheck = new checkBalance("token",ethCheck.accounts,testCase.oracle,ercToken);
     await tokenCheck.beforeFunction();
     let txResult = await testCase.addCollateral(token.address,amount,mintAmount,account);
-    await ethCheck.setTx(txResult.tx);
+    await ethCheck.setTx(txResult);
     tokenCheck.addAccountCheckValue(account,mintAmount);
     ethCheck.addAccountCheckValue(account,-amount);
     ethCheck.addAccountCheckValue(testCase.manager.address,amount);
     txResult = await testCase.addCollateral(token.address,0,mintAmount,account);
-    await ethCheck.setTx(txResult.tx);
+    await ethCheck.setTx(txResult);
     tokenCheck.addAccountCheckValue(account,mintAmount);
 
     await ethCheck.checkFunction();

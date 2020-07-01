@@ -273,6 +273,9 @@ contract OptionsFormulas is Ownable{
         }
         (uint256 lowerLimit,bool limitSign) = _calNumberMulUint(_collateral.lowerLimit,_strikePrice);
         assert(limitSign);
+        if (lowerLimit == 0){
+            lowerLimit = 1;
+        }
         if (result<lowerLimit){
             result = lowerLimit;
         }

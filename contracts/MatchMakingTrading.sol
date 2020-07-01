@@ -145,16 +145,7 @@ contract MatchMakingTrading is TransactionFee {
         PayOptionsOrder[] storage orderList = payOrderMap[settlementCurrency][optionsToken];
         for (uint256 i=0;i<orderList.length;i++){
             if (orderList[i].owner == msg.sender){
-                uint256 payAmount = orderList[i].settlementsAmount;
-                if (orderList[i].settlementsAmount > 0){
-                    orderList[i].settlementsAmount = 0;
-                    if (settlementCurrency == address(0)) {
-                        orderList[i].owner.transfer(payAmount);                
-                    }else {
-                        IERC20 settlement = IERC20(settlementCurrency);
-                        settlement.transfer(orderList[i].owner,payAmount);           
-                    }
-                }
+                _returnPayOrders(orderList[i],settlementCurrency);
                 emit RedeemPayOrder(msg.sender,optionsToken,settlementCurrency,orderList[i].amount);
                 for (uint256 j=i+1;j<orderList.length;j++) {
                     orderList[i].owner = orderList[j].owner;
@@ -208,8 +199,11 @@ contract MatchMakingTrading is TransactionFee {
     function buyOptionsToken(address optionsToken,uint256 amount,address settlementCurrency,uint256 currencyAmount) public payable {
         uint256 tokenPrice = _oracle.getBuyOptionsPrice(optionsToken);
         uint256 currencyPrice = _oracle.getPrice(settlementCurrency);
+        IERC20 settlement = IERC20(settlementCurrency);
         if (settlementCurrency == address (0)) {
             currencyAmount = msg.value;
+        }else{
+            settlement.transferFrom(msg.sender,address(this),currencyAmount);      
         }
         (uint256 allPay,uint256 transFee) = _calPayment(amount,tokenPrice,currencyPrice);
         require(allPay.add(transFee)<=currencyAmount,"pay value is insufficient!");
@@ -234,7 +228,6 @@ contract MatchMakingTrading is TransactionFee {
             if (settlementCurrency == address(0)) {
                 msg.sender.transfer(currencyAmount);                
             }else {
-                IERC20 settlement = IERC20(settlementCurrency);
                 settlement.transfer(msg.sender,currencyAmount);           
             }           
         }
@@ -330,17 +323,7 @@ contract MatchMakingTrading is TransactionFee {
                 }
                 index++;
             }else {
-                if (orderList[i].settlementsAmount > 0) {
-                    uint256 payAmount = orderList[i].settlementsAmount;
-                    orderList[i].settlementsAmount = 0;
-                    if (settlementCurrency == address(0)) {
-                        emit DebugEvent(123,i,payAmount);
-                    }else {
-                        IERC20 settlement = IERC20(settlementCurrency);
-                        settlement.transfer(orderList[i].owner,payAmount);           
-                    }           
-
-                }
+                _returnPayOrders(orderList[i],settlementCurrency);
             }
         }
          if (index < orderList.length) {
@@ -395,18 +378,21 @@ contract MatchMakingTrading is TransactionFee {
     function _returnExpiredPayOrders(address optionsToken,address settlementCurrency) internal{
         PayOptionsOrder[] storage orderList = payOrderMap[settlementCurrency][optionsToken];
         for (uint i=0;i<orderList.length;i++) {
-            if (orderList[i].settlementsAmount > 0) {
-                uint256 payAmount = orderList[i].settlementsAmount;
-                orderList[i].settlementsAmount = 0;
-                if (settlementCurrency == address(0)) {
-                    orderList[i].owner.transfer(payAmount);                
-                }else {
-                    IERC20 settlement = IERC20(settlementCurrency);
-                    settlement.transfer(orderList[i].owner,payAmount);           
-                }   
-             }
+            _returnPayOrders(orderList[i],settlementCurrency);
         }
         delete payOrderMap[settlementCurrency][optionsToken];
+    }
+    function _returnPayOrders(PayOptionsOrder storage payOrder,address settlementCurrency) internal {
+    if (payOrder.settlementsAmount > 0) {
+            uint256 payAmount = payOrder.settlementsAmount;
+            payOrder.settlementsAmount = 0;
+            if (settlementCurrency == address(0)) {
+                payOrder.owner.transfer(payAmount);                
+            }else {
+                IERC20 settlement = IERC20(settlementCurrency);
+                settlement.transfer(payOrder.owner,payAmount);           
+            }   
+        }
     }
     function isEligibleOptionsToken(address optionsToken) public view returns(bool) {
         (,,,,uint256 expiration,bool exercised) = _optionsManager.getOptionsTokenInfo(optionsToken);

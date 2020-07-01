@@ -1,7 +1,8 @@
 var BN = require("bn.js");
+let address0 = "0x0000000000000000000000000000000000000000";
 module.exports =  class {
-    constructor(accounts,oracle,token){
-
+    constructor(name,accounts,oracle,token){
+        this.name = name;
         this.oracle = oracle;
         this.token = token;
         this.balanceInfo = {};
@@ -42,11 +43,13 @@ module.exports =  class {
         }
     }
     async setTx(tx){
-        if (!this.token){
-            await this._EthSetTx(tx);
-        }else{
-            await this._TokenSetTx(tx);
-        }
+        for (var i=0;i<tx.length;i++){
+            if (!this.token){
+                await this._EthSetTx(tx[i].tx);
+            }else{
+                await this._TokenSetTx(tx[i].tx);
+            }
+            }
     }
     async checkFunction(){
         if (!this.token){
@@ -73,7 +76,7 @@ module.exports =  class {
             this.balanceInfo[account].finalBalance = await this.oracle.getEthBalance(account);
             let subBal = this.balanceInfo[account].finalBalance.sub(this.balanceInfo[account].beforeBalance);
             let checkZero = subBal.sub(this.balanceInfo[account].checkValue).toNumber();
-            assert.equal(checkZero,0,account + " balance check failed");
+            assert(Math.abs(checkZero)<10,this.name + " : "+account + " balance check failed! "+checkZero);
 //            console.log("-----------------------1",checkZero);
         }
     }
@@ -84,7 +87,7 @@ module.exports =  class {
             let subBal = this.balanceInfo[account].finalBalance.sub(this.balanceInfo[account].beforeBalance);
             let checkZero = subBal.sub(this.balanceInfo[account].checkValue).toNumber();
 //            console.log("-----------------------2",checkZero);
-            assert.equal(checkZero,0,this.token+ ": "+ account + " token balance check failed");
+            assert(Math.abs(checkZero)<10,this.name + " : "+ this.token.address+ ": "+ account + " token balance check failed! "+checkZero);
         }
     }
 

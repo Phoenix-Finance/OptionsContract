@@ -41,11 +41,11 @@ exports.OptionsManagerCreateOptionsToken = async function(managerAddress,collate
     let managerInstance = await OptionsManager.at(managerAddress);
     let result = await managerInstance.addWhiteList(collateral);
     if(checkbalance){
-        await checkbalance.setTx(result.tx);
+        await checkbalance.setTx([result]);
     }
     result = await managerInstance.createOptionsToken("options token 1",collateral,underlyingAssets,strikePrice,expiration,optType);
     if(checkbalance){
-        await checkbalance.setTx(result.tx);
+        await checkbalance.setTx([result]);
     }
     let options = await managerInstance.getOptionsTokenList();
     let value = await managerInstance.getOptionsTokenInfo(options[options.length-1]);
@@ -67,12 +67,12 @@ exports.OptionsManagerAddCollateral = async function(managerAddress,tokenAddress
     let managerInstance = await OptionsManager.at(managerAddress);
     if (collateral == "0x0000000000000000000000000000000000000000"){
         let txResult = await managerInstance.addCollateral(tokenAddress,collateral,amount,mintOptionsTokenAmount,{from:account,value:amount});
-        return txResult;
+        return [txResult];
     }else{
         let token = await IERC20.at(collateral);
-        await token.approve(managerAddress,amount,{from:account});
+        let txResult1 = await token.approve(managerAddress,amount,{from:account});
         let txResult = await managerInstance.addCollateral(tokenAddress,collateral,amount,mintOptionsTokenAmount,{from:account});
-        return txResult;
+        return [txResult1,txResult];
     }
 }
 exports.SetOraclePrice = async function (oracleAddr,priceObj) {

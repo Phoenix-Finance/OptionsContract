@@ -25,6 +25,7 @@ contract('MatchMakingTrading', function (accounts){
         console.log(managerAddress);
         let managerIns = await OptionsManager.at(managerAddress);
         await tradingInstance.addWhiteList(collateral0);
+        
         let result = await Addcollateral(managerIns,collateral0,priceObj,expiration,0,amount,accounts[2]);
         let oracleAddr = await managerIns.getOracleAddress();
         let oracleInstance = await TestCompoundOracle.at(oracleAddr); 
