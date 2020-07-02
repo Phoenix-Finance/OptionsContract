@@ -1,10 +1,11 @@
 pragma solidity ^0.4.26;
 import "./TransactionFee.sol";
+import "./ReentrancyGuard.sol";
 import "./CompoundOracleInterface.sol";
 import "./SafeMath.sol";
 import "./IERC20.sol";
 import "./IOptionsManager.sol";
-contract MatchMakingTrading is TransactionFee {
+contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
     using SafeMath for uint256;
     //sell options order defination
     struct SellOptionsOrder {
@@ -37,7 +38,6 @@ contract MatchMakingTrading is TransactionFee {
     event ReturnExpiredOrders(address indexed optionsToken);
     event RedeemPayOrder(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 amount);
     event RedeemSellOrder(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 amount);
-    event DebugEvent(uint256 value0,uint256 value1,uint256 value2);
     //*******************getter***********************
     function getOracleAddress() public view returns(address){
         return address(_oracle);
@@ -103,7 +103,7 @@ contract MatchMakingTrading is TransactionFee {
       * @param deposit you need to deposit some settlement currency to pay the order.deposit is the amount of settlement currency to pay.
       * @param buyAmount the options token amount you want to buy.
       */
-    function addPayOrder(address optionsToken,address settlementCurrency,uint256 deposit,uint256 buyAmount) public payable{
+    function addPayOrder(address optionsToken,address settlementCurrency,uint256 deposit,uint256 buyAmount) nonReentrant public payable{
         require(isEligibleAddress(settlementCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         uint256 tokenPrice = _oracle.getSellOptionsPrice(optionsToken);
@@ -126,7 +126,7 @@ contract MatchMakingTrading is TransactionFee {
       * @param settlementCurrency the settlement currency address
       * @param amount the options token amount you want to sell.
       */
-    function addSellOrder(address optionsToken,address settlementCurrency,uint256 amount) public {
+    function addSellOrder(address optionsToken,address settlementCurrency,uint256 amount)nonReentrant public {
         require(isEligibleAddress(settlementCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         IERC20 ERC20Token = IERC20(optionsToken);
@@ -139,7 +139,7 @@ contract MatchMakingTrading is TransactionFee {
       * @param optionsToken options token address
       * @param settlementCurrency the settlement currency address
       */    
-    function redeemPayOrder(address optionsToken,address settlementCurrency) public{
+    function redeemPayOrder(address optionsToken,address settlementCurrency)nonReentrant public{
         require(isEligibleAddress(settlementCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         PayOptionsOrder[] storage orderList = payOrderMap[settlementCurrency][optionsToken];
@@ -165,7 +165,7 @@ contract MatchMakingTrading is TransactionFee {
       * @param optionsToken options token address
       * @param settlementCurrency the settlement currency address
       */    
-    function redeemSellOrder(address optionsToken,address settlementCurrency) public {
+    function redeemSellOrder(address optionsToken,address settlementCurrency)nonReentrant public {
         require(isEligibleAddress(settlementCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         SellOptionsOrder[] storage orderList = sellOrderMap[settlementCurrency][optionsToken];
@@ -196,7 +196,7 @@ contract MatchMakingTrading is TransactionFee {
       * @param settlementCurrency the settlement currency address
       * @param currencyAmount the settlement currency amount will be payed for
       */     
-    function buyOptionsToken(address optionsToken,uint256 amount,address settlementCurrency,uint256 currencyAmount) public payable {
+    function buyOptionsToken(address optionsToken,uint256 amount,address settlementCurrency,uint256 currencyAmount)nonReentrant public payable {
         uint256 tokenPrice = _oracle.getBuyOptionsPrice(optionsToken);
         uint256 currencyPrice = _oracle.getPrice(settlementCurrency);
         IERC20 settlement = IERC20(settlementCurrency);
@@ -240,7 +240,7 @@ contract MatchMakingTrading is TransactionFee {
       * @param amount options token amount you want to sell
       * @param settlementCurrency the settlement currency address
       */      
-    function sellOptionsToken(address optionsToken,uint256 amount,address settlementCurrency) public {
+    function sellOptionsToken(address optionsToken,uint256 amount,address settlementCurrency)nonReentrant public {
         uint256 tokenPrice = _oracle.getSellOptionsPrice(optionsToken);
         uint256 currencyPrice = _oracle.getPrice(settlementCurrency);
         uint256 _totalSell = 0;
@@ -260,8 +260,6 @@ contract MatchMakingTrading is TransactionFee {
             (uint256 sellAmount,uint256 leftCurrency) = _orderTrading(optionsToken,optionsAmount,tokenPrice,settlementCurrency,orderList[i].settlementsAmount,currencyPrice,
             msg.sender,orderList[i].owner);
             _totalSell = _totalSell.add(sellAmount);
-            emit DebugEvent(2,amount,_totalSell);
-            emit DebugEvent(3,sellAmount,leftCurrency);
             orderList[i].amount = orderList[i].amount.sub(sellAmount);
             orderList[i].settlementsAmount = leftCurrency;
             if (amount == 0) {
@@ -277,7 +275,7 @@ contract MatchMakingTrading is TransactionFee {
     /**
       * @dev return back the expired options token orders. Both buy orders and sell orders
       */        
-    function returnExpiredOrders()public{
+    function returnExpiredOrders()nonReentrant public{
         address[] memory options = _optionsManager.getOptionsTokenList();
         for (uint256 i=0;i<options.length;i++){
             if (!isEligibleOptionsToken(options[i])){

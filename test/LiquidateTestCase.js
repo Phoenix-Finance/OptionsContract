@@ -83,7 +83,7 @@ contract('OptionsManager', function (accounts){
         let expiration = Math.floor(Date.now()/1000)+60;
         let amount = 1000000000;
         testCase.setOraclePrice(priceObj);
-        let newPrice = Math.floor(underlyingPrice*1.2);
+        let newPrice = Math.floor(underlyingPrice*1.4);
         await testNormalTokenTransfer(collateral0,testCase,expiration,0,amount,newPrice,accounts);
         await testCase.oracle.setUnderlyingPrice(underlyingAsset,underlyingPrice);
 //        newPrice = Math.floor(underlyingPrice*0.4);
@@ -115,7 +115,7 @@ contract('OptionsManager', function (accounts){
         let expiration = Math.floor(Date.now()/1000)+60;
         let amount = 1000000000;
         testCase.setOraclePrice(priceObj);
-        let newPrice = Math.floor(underlyingPrice*1.2);
+        let newPrice = Math.floor(underlyingPrice*1.4);
         await testNormalTokenTransfer(fnxToken.address,testCase,expiration,0,amount,newPrice,accounts);
         await testCase.oracle.setUnderlyingPrice(underlyingAsset,underlyingPrice);
 //        newPrice = Math.floor(underlyingPrice*0.4);
@@ -147,6 +147,7 @@ async function testNormalLiquidate(collateral,testCase,expiration,optType,amount
     for (var i=2;i<9;i++){
         let account = accounts[i];
         let txResult = await testCase.addCollateral(token.address,amount,needMint,account);
+        let tokenAmount = await testCase.manager.getWriterOptionsTokenBalance(account,token.address);
         await checks[0].setTx(txResult);
         checks[0].addAccountCheckValue(account,-amount);
         checks[0].addAccountCheckValue(testCase.manager.address,amount);
@@ -157,13 +158,14 @@ async function testNormalLiquidate(collateral,testCase,expiration,optType,amount
     checks[0].addAccountCheckValue(testCase.manager.address,amount);
     await testCase.oracle.setUnderlyingPrice(underlyingAsset,newUnderlyingPrice);
     let writers = await testCase.manager.getOptionsTokenWriterList(token.address);
-    for (var i=0;i<writers[0].length;i++){
-        let account = writers[0][i];
-        let collateralAmount = writers[1][i].toNumber();
-        let tokenAmount = writers[2][i].toNumber();
-        needMint = await testCase.calCollateralToMintAmount(token.address,collateralAmount,optType);
-        console.log(needMint,tokenAmount)
-        if (needMint < tokenAmount){
+    for (var i=0;i<writers.length;i++){
+        let account = writers[i];
+        let tokenUsd = await testCase.manager.calculateOptionsValueUSD(collateral,account);
+        let collateralAmount = await testCase.manager.getWriterCollateralBalance(account,collateral);
+        let tokenAmount = await testCase.manager.getWriterOptionsTokenBalance(account,token.address);
+        let colPrice = await testCase.oracle.getPrice(collateral);
+        let collateralUsd = collateralAmount*colPrice;
+        if (tokenUsd > collateralUsd){
             let txResult = await ercToken.approve(testCase.manager.address,tokenAmount,{from:account});
             await checks[0].setTx([txResult]);
             txResult = await testCase.manager.liquidate(token.address,account,tokenAmount,{from:account});
@@ -243,30 +245,22 @@ async function testNormalTokenTransfer(collateral,testCase,expiration,optType,am
             exercisePrice = oldUnderlying - newUnderlyingPrice;
         }        
     }
-    let singleExcercise = Math.floor(OptionsValue*exercisePrice/collateralPrice);
+    let singleExcercise = Math.floor(OptionsValue*exercisePrice/collateralPrice*0.997);
+    let fee = Math.floor(singleExcercise*0.003);
     for (var j=5;j<10;j++){
         await checks[0].addAccountCheckValue(accounts[j],singleExcercise);
         checks[0].addAccountCheckValue(testCase.manager.address,-singleExcercise);
     }
-    let fee = Math.floor(needMint*exercisePrice/collateralPrice);
-    fee = Math.floor(fee*0.003);
-    let writerPay = Math.floor(singleExcercise*5/3+fee);
-    let writers = await testCase.manager.getOptionsTokenWriterList(token.address);
-    for (i = 0;i<writers[0].length;i++)
-    {
-        let payBack = writers[1][i].toNumber() - writerPay;
-        console.log(writers[0][i],payBack,writerPay);
-        checks[0].addAccountCheckValue(writers[0][i],payBack);
-        checks[0].addAccountCheckValue(testCase.manager.address,-payBack);
 
-    }
     await functionModule.sleep(60000);
-    await testCase.manager.exercise();
+    let tx = await testCase.manager.exercise();
+    console.log(tx.tx)
 
     for (var i=0;i<checks.length;i++){
         await checks[i].checkFunction();
     }
 }
 async function testExercise(testCase){
-    await testCase.manager.exercise();
+    let tx = await testCase.manager.exercise();
+    console.log(tx.tx)
 }

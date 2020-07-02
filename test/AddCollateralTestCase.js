@@ -26,13 +26,14 @@ contract('OptionsManager', function (accounts){
         let expiration = Math.floor(Date.now()/1000)+3600;
         let amount = 1000000000;
         test1.setOraclePrice(priceObj);
-        let mint = await test1.formulas.calculateMaxMintAmount(10000000,10000000,100000,100000,1);
         console.log("call options adding collateral!");
         await testAddcollateral(collateral0,test1,expiration,0,amount,accounts);
         await testAddcollateralTwice(collateral0,test1,expiration,0,amount,accounts[2]);
+        await testWithdrawCollateralAndBurnToken(collateral0,test1,expiration,0,amount,accounts[4]);
         console.log("put options adding collateral!");
         await testAddcollateral(collateral0,test1,expiration,1,amount,accounts);
         await testAddcollateralTwice(collateral0,test1,expiration,1,amount,accounts[3]);
+        await testWithdrawCollateralAndBurnToken(collateral0,test1,expiration,1,amount,accounts[5]);
     });
     it('OptionsManager adding Token Collateral case one', async function (){
         await test1.migrateOptionsManager();  
@@ -48,7 +49,7 @@ contract('OptionsManager', function (accounts){
                 price:100000,
             },{
                 address:fnxToken.address,
-                price:100000,
+                price:110000,
             }],
             underlyingAssets:[{
                 id:1,
@@ -58,13 +59,14 @@ contract('OptionsManager', function (accounts){
         let expiration = Math.floor(Date.now()/1000)+3600;
         let amount = 1000000000;
         test1.setOraclePrice(priceObj);
-        let mint = await test1.formulas.calculateMaxMintAmount(10000000,10000000,100000,100000,1);
         console.log("call options adding collateral!");
         await testAddcollateral(fnxToken.address,test1,expiration,0,amount,accounts);
         await testAddcollateralTwice(fnxToken.address,test1,expiration,0,amount,accounts[2]);
+        await testWithdrawCollateralAndBurnToken(fnxToken.address,test1,expiration,0,amount,accounts[4]);
         console.log("put options adding collateral!");
         await testAddcollateral(fnxToken.address,test1,expiration,1,amount,accounts);
         await testAddcollateralTwice(fnxToken.address,test1,expiration,1,amount,accounts[3]);
+        await testWithdrawCollateralAndBurnToken(fnxToken.address,test1,expiration,1,amount,accounts[5]);
     });
     return
     it('OptionsManager adding Collateral case two', async function (){
@@ -185,5 +187,42 @@ async function testAddcollateralTwice(collateral,testCase,expiration,optType,amo
 
     await ethCheck.checkFunction();
     await tokenCheck.checkFunction();
+}
 
+async function testWithdrawCollateralAndBurnToken(collateral,testCase,expiration,optType,amount,account){
+    let underlyingAsset = 1;
+    let ethCheck = new checkBalance("collateral",[],testCase.oracle);
+    if (collateral != collateral0){
+        ethCheck.token = await IERC20.at(collateral); 
+    }
+    ethCheck.addAccount(account);
+    ethCheck.addAccount(testCase.manager.address);
+    await ethCheck.beforeFunction();
+    let strikePrice = await testCase.getStrikePrice(underlyingAsset,1.1);
+    let token = await testCase.createOptionsToken(collateral,underlyingAsset,expiration,optType,strikePrice,ethCheck);
+    let needMint = await testCase.calCollateralToMintAmount(token.address,amount,optType);
+    let ercToken = await IERC20.at(token.address);
+    let tokenCheck = new checkBalance("token",ethCheck.accounts,testCase.oracle,ercToken);
+    await tokenCheck.beforeFunction();
+    let txResult = await testCase.addCollateral(token.address,amount*2,needMint,account);
+    await ethCheck.setTx(txResult);
+    tokenCheck.addAccountCheckValue(account,needMint);
+    ethCheck.addAccountCheckValue(account,-amount*2);
+    ethCheck.addAccountCheckValue(testCase.manager.address,amount*2);
+    txResult = await testCase.withdrawCollateral(collateral,amount,account);
+    await ethCheck.setTx(txResult);
+    ethCheck.addAccountCheckValue(account,amount);
+    ethCheck.addAccountCheckValue(testCase.manager.address,-amount);
+
+    txResult = await testCase.burnOptionsToken(token.address,needMint,account);
+    await ethCheck.setTx(txResult);
+    tokenCheck.addAccountCheckValue(account,-needMint);
+
+    txResult = await testCase.withdrawCollateral(collateral,amount,account);
+    await ethCheck.setTx(txResult);
+    ethCheck.addAccountCheckValue(account,amount);
+    ethCheck.addAccountCheckValue(testCase.manager.address,-amount);
+
+    await ethCheck.checkFunction();
+    await tokenCheck.checkFunction();
 }

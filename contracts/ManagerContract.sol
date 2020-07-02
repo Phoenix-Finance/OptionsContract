@@ -1,6 +1,8 @@
 pragma solidity ^0.4.26;
 import "./SafeMath.sol";
+import "./IERC20.sol";
 import "./Ownable.sol";
+import "./ReentrancyGuard.sol";
 import "./OptionsToken.sol";
 import "./CompoundOracleInterface.sol";
 import "./OptionsFormulas.sol";
@@ -128,6 +130,12 @@ contract OptionsVault is TransactionFee
     function getOptionsTokenWriterList(address tokenAddress)public view returns (address[]){
             return optionsMap[tokenAddress].writers;
     }
+    function getWriterCollateralBalance(address writer,address collateral)public view returns (uint256){
+            return writerVaults[collateral][writer];
+    }
+    function getWriterOptionsTokenBalance(address writer,address tokenAddress)public view returns (uint256){
+            return writerOptions[tokenAddress][writer];
+    }
     function getOptionsTokenInfo(address tokenAddress)public view returns (uint8,address,uint32,uint256,uint256,bool){
         if (_contains(tokenAddress)){
             OptionsInfo storage options = optionsMap[tokenAddress].options;
@@ -136,7 +144,7 @@ contract OptionsVault is TransactionFee
         }
     }
 }
-contract OptionsManager is OptionsVault {
+contract OptionsManager is OptionsVault,ReentrancyGuard {
     using SafeMath for uint256;
     IOptFormulas internal _optionsFormulas;
     ICompoundOracle internal _oracle;
@@ -150,7 +158,6 @@ contract OptionsManager is OptionsVault {
     event Exercise(address indexed Sender,address indexed optionsToken);
     event Liquidate(address indexed Sender,address indexed optionsToken,address indexed writer,uint256 amount);
     event BurnOptionsToken(address indexed optionsToken,address indexed writer,uint256 amount);
-    event DebugEvent(uint256 value0,uint256 value1,uint256 value2);
     //*******************getter***********************
     function getOracleAddress() public view returns(address){
         return address(_oracle);
@@ -187,7 +194,7 @@ contract OptionsManager is OptionsVault {
     uint256 strikePrice,
     uint256 expiration,
     uint8 optType)
-    public onlyOwner{
+    public onlyOwner nonReentrant{
         require(underlyingAssets>0 , "underlying cannot be zero");
         require(isEligibleAddress(collateral) , "collateral is unsupported token");
 //        expiration = expiration.add(now);
@@ -204,7 +211,7 @@ contract OptionsManager is OptionsVault {
         * @param amount The amount of collateral asset
         * @param mintOptionsTokenAmount The amount of options token will be minted and sent to the writer;
         */   
-    function addCollateral(address optionsToken,address collateral,uint256 amount,uint256 mintOptionsTokenAmount)public payable{
+    function addCollateral(address optionsToken,address collateral,uint256 amount,uint256 mintOptionsTokenAmount)public payable nonReentrant{
         require(_contains(optionsToken),"This OptionsToken does not exist");
         require(!_isExpired(optionsMap[optionsToken]), "This OptionsToken expired");
         require(optionsMap[optionsToken].options.collateralCurrency == collateral,"Collateral currency type error");
@@ -216,7 +223,7 @@ contract OptionsManager is OptionsVault {
         * @param collateral The collateral address.
         * @param amount The amount  collateral asset which will be Withdrawn
         */   
-    function withdrawCollateral(address collateral,uint256 amount)public{
+    function withdrawCollateral(address collateral,uint256 amount)public nonReentrant{
         require(isEligibleAddress(collateral) , "collateral is unsupported token");
         writerVaults[collateral][msg.sender] = writerVaults[collateral][msg.sender].sub(amount);
         require (_isSufficientCollateral(collateral,msg.sender,address(0),0,0),"option token writter's Collateral is insufficient");
@@ -227,7 +234,7 @@ contract OptionsManager is OptionsVault {
     /**
       * @dev  exercise all of the expired options token;
       */  
-    function exercise()public{
+    function exercise()public nonReentrant{
         for (uint keyIndex = _iterate_start();_iterate_valid(keyIndex);keyIndex = _iterate_next(keyIndex)){
             IndexValue storage optionsItem = optionsMap[optionsTokenList[keyIndex].key];
             _exercise(optionsTokenList[keyIndex].key,optionsItem);
@@ -239,7 +246,7 @@ contract OptionsManager is OptionsVault {
       * @param writer The Options writer address.
       * @param amount The amount  of optionsToken which will be liquidated
       */  
-    function liquidate(address optionsToken,address writer,uint256 amount)public{
+    function liquidate(address optionsToken,address writer,uint256 amount)public nonReentrant{
         require(_contains(optionsToken),"This OptionsToken does not exist");
         IndexValue storage optionsItem = optionsMap[optionsToken];
         require(!_isExpired(optionsItem), "OptionsToken expired");
@@ -273,7 +280,7 @@ contract OptionsManager is OptionsVault {
       * @param optionsToken The Options token address.
       * @param amount The amount of options token which will be burned
       */     
-    function burnOptionsToken(address optionsToken,uint256 amount)public{
+    function burnOptionsToken(address optionsToken,uint256 amount)public nonReentrant{
        require(_contains(optionsToken),"This OptionsToken does not exist");
         IndexValue storage optionsItem = optionsMap[optionsToken];
         require(!_isExpired(optionsItem), "OptionsToken expired");
@@ -293,7 +300,6 @@ contract OptionsManager is OptionsVault {
 
       */  
     function _exercise(address tokenAddress,IndexValue storage optionsItem)internal {
-        emit DebugEvent(1111,optionsItem.options.expiration,now);
         if (!_isExpired(optionsItem) || _isExercised(optionsItem)){
             return;
         }
@@ -308,7 +314,6 @@ contract OptionsManager is OptionsVault {
         IERC20 collateralToken = IERC20(optionsItem.options.collateralCurrency);
         //calculate tokenPayback
         uint256 tokenPayback = _calExerciseTokenPayback(tokenAddress,optionsItem);
-        emit DebugEvent(2222,tokenPayback,2222);
         if (tokenPayback > 0 ){
             //calculate balance pay back
             IIterableToken iterToken = IIterableToken(tokenAddress);
@@ -318,7 +323,6 @@ contract OptionsManager is OptionsVault {
                     if (balances[i]>0){
                         if (writerOptions[tokenAddress][accounts[i]] == 0){ //not writer
                             value = balances[i].mul(tokenPayback).div(_calDecimal);
-                            emit DebugEvent(3333,i,value);
                             accounts[i].transfer(value);
                         }
                     }
@@ -384,7 +388,6 @@ contract OptionsManager is OptionsVault {
             allPayback = allPayback.add(_payback);
             totalSuply = totalSuply.add(leftToken);
         }
-        emit DebugEvent(9,allPayback,totalSuply);
         //assert iterToken.gettotalsuply != totalsuply
         if (totalSuply == 0){
             return 0;

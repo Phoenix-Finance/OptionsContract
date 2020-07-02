@@ -155,7 +155,7 @@ async function testSellOrder(collateral,settlement,testCase,expiration,optType,a
         let account = accounts[j];
         let fees = await testCase.calBuyOptionsToken(token.address,buyMint,settlement);
         console.log(fees)
-        let txResult = await testCase.buyOptionsToken(token.address,buyMint,settlement,fees[0]+10,account);
+        let txResult = await testCase.buyOptionsToken(token.address,buyMint,settlement,fees[0]+100,account);
         console.log(txResult[0].tx);
         await ethCheck.setTx(txResult);
         checkSettle.addAccountCheckValue(account,-fees[0]);
@@ -226,7 +226,7 @@ async function testBuyOrder(collateral,settlement,testCase,expiration,optType,am
         let account = accounts[j];
         let fees = await testCase.calSellOptionsToken(token.address,buyMint,settlement);
         console.log(fees);
-        let fee = fees[0]+20;
+        let fee = fees[0]+100;
         let txResult = await testCase.addBuyOrder(token.address,settlement,fee,buyMint,account);
         await ethCheck.setTx(txResult);
         checkSettle.addAccountCheckValue(account,-fee);

@@ -115,6 +115,16 @@ module.exports =  class {
         let optionObj = await this.getTokenInfo(tokenAddress);
         return await functionModule.OptionsManagerAddCollateral(this.manager.address,tokenAddress,optionObj.collateral,collateralAmount,mintAmount,account);
     }
+    async withdrawCollateral(collateral,amount,account){
+        let result = await this.manager.withdrawCollateral(collateral,amount,{from:account});
+        return [result];
+    }
+    async burnOptionsToken(tokenAddress,amount,account){
+        let token = await IERC20.at(tokenAddress);
+        let result1 = await token.approve(this.manager.address,amount,{from:account});
+        let result = await this.manager.burnOptionsToken(tokenAddress,amount,{from:account});
+        return [result1,result];
+    }
     async getTestStrikePriceList(underlyingAsset,optType){
         let currentPrice = await this.oracle.getUnderlyingPrice(underlyingAsset);
         console.log(currentPrice);
@@ -150,12 +160,12 @@ module.exports =  class {
         incentive = Math.floor(incentive*Math.pow(10,incentiveRate[1].toNumber()));
         payback = payback+incentive;
         let transFee = Math.floor(payback*0.003);
-        let bothPay = payback+transFee;
-        if(bothPay > colleteralAmount){
+        if(payback > colleteralAmount){
             transFee = Math.floor(colleteralAmount*0.003);
             payback = colleteralAmount - transFee;
+        }else{
+            payback = payback - transFee;
         }
-        console.log(payback,colleteralAmount);
         return payback;
     }
     async getTokenInfo(tokenAddress){
