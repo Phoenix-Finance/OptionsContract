@@ -4,11 +4,8 @@ import "./Ownable.sol";
 import "./SafeMath.sol";
 import "./OptionsToken.sol";
 interface IOptFormulas {
-    function callCollateralPrice(uint256 _strikePrice,uint256 _currentPrice)external view returns(uint256);
-    function putCollateralPrice(uint256 _strikePrice,uint256 _currentPrice)external view returns(uint256);
+    function getCollateralPrice(uint256 _strikePrice,uint256 _currentPrice,uint8 optType)external view returns(uint256);
     function createNewToken(uint256 expiration,string optionsTokenName)external returns(address);
-    function calculateMaxMintAmount(uint256 collateralPrice,uint256 collateralAmount,uint256 strikePrice,uint256 underlyingPrice,uint8 optType)
-            external returns (uint256);
 }
 
 contract OptionsFormulas is Ownable{
@@ -206,6 +203,9 @@ contract OptionsFormulas is Ownable{
         putCollateral.upperSegment.priceSlope.exponent = _priceSlopeExponent;
     }
     //****************************Formulas call***********************************************
+    function getCollateralPrice(uint256 _strikePrice,uint256 _currentPrice,uint8 optType)public view returns(uint256){
+        return (optType == 0) ? callCollateralPrice(_strikePrice,_currentPrice) : putCollateralPrice(_strikePrice,_currentPrice);
+    }
     function callCollateralPrice(uint256 _strikePrice,uint256 _currentPrice)public view returns(uint256){
         return _calCollateralPrice(callCollateral,_strikePrice,_currentPrice);
     }
@@ -217,12 +217,6 @@ contract OptionsFormulas is Ownable{
         optionsToken.setManager(msg.sender);
         optionsToken.transferOwnership(msg.sender);
         return optionsToken;
-    }
-    function calculateMaxMintAmount(uint256 collateralPrice,uint256 collateralAmount,uint256 strikePrice,uint256 underlyingPrice,uint8 optType)
-            public view returns (uint256){
-        uint256 collateralValue = collateralAmount.mul(collateralPrice);
-        uint256 needCollateral = (optType == 0) ? callCollateralPrice(strikePrice,underlyingPrice) : putCollateralPrice(strikePrice,underlyingPrice);
-        return collateralValue.div(needCollateral);
     }
     //******************************Internal functions******************************************
     function _calNumberMulUint(Number number,uint256 value) internal pure returns (uint256,bool){
