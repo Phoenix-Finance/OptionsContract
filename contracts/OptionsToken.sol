@@ -44,10 +44,10 @@ contract BalanceMapping is IIterableToken
         uint256[] memory balances = new uint256[](_balances.size);
         uint256 keyIndex = 0;
         for (uint256 i=0;i<_balances.keys.length;i++){
-            if(_balances.keys[keyIndex].deleted){
+            if(_balances.keys[i].deleted){
                 continue;
             }
-            accounts[keyIndex] = _balances.keys[keyIndex].key;
+            accounts[keyIndex] = _balances.keys[i].key;
             balances[keyIndex] = _balances.data[accounts[keyIndex]].value;
             keyIndex++;
         }
