@@ -155,7 +155,8 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
     event CreateOptions(address indexed collateral,address indexed tokenAddress, uint32 indexed underlyingAssets,uint256 strikePrice,uint256 expiration,uint8 optType);
     event AddCollateral(address indexed optionsToken,uint256 indexed amount,uint256 mintOptionsTokenAmount);
     event WithdrawCollateral(address indexed optionsToken,uint256 amount);
-    event Exercise(address indexed Sender,address indexed optionsToken);
+    event Exercise(address indexed Sender,address indexed optionsToken,uint256 unitPrice);
+    event Transferback(address indexed collateral,address indexed recipient,uint256 payback);
     event Liquidate(address indexed Sender,address indexed optionsToken,address indexed writer,uint256 amount);
     event BurnOptionsToken(address indexed optionsToken,address indexed writer,uint256 amount);
     //*******************getter***********************
@@ -324,6 +325,7 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
                         if (writerOptions[tokenAddress][accounts[i]] == 0){ //not writer
                             value = balances[i].mul(tokenPayback).div(_calDecimal);
                             accounts[i].transfer(value);
+                            emit Transferback(optionsItem.options.collateralCurrency,accounts[i],value);
                         }
                     }
                 }
@@ -333,13 +335,14 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
                         if (writerOptions[tokenAddress][accounts[i]] == 0){ //not writer
                             value = balances[i].mul(tokenPayback).div(_calDecimal);
                             collateralToken.transfer(accounts[i],value);
+                            emit Transferback(optionsItem.options.collateralCurrency,accounts[i],value);
                         }
                     }
                 }
             }
         }
         _remove(tokenAddress);
-        emit Exercise(msg.sender,tokenAddress);        
+        emit Exercise(msg.sender,tokenAddress,tokenPayback);
     }
     /**
       * @dev  transfer collateral payback amount;
@@ -353,9 +356,11 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
         }
         if (collateral == address(0)){
             recieptor.transfer(payback);
+            emit Transferback(collateral,recieptor,payback);
         }else{
             IERC20 collateralToken = IERC20(collateral);
             collateralToken.transfer(recieptor,payback);
+            emit Transferback(collateral,recieptor,payback);
         }
     }
     /**

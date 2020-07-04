@@ -224,13 +224,7 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
                 break;
             }
         }
-        if (currencyAmount > 0) {
-            if (settlementCurrency == address(0)) {
-                msg.sender.transfer(currencyAmount);                
-            }else {
-                settlement.transfer(msg.sender,currencyAmount);           
-            }           
-        }
+        _transferPayback(msg.sender,settlementCurrency,currencyAmount);
         emit BuyOptionsToken(msg.sender,optionsToken,settlementCurrency,tokenPrice,_totalBuy);
         _removeEmptySellOrder(optionsToken,settlementCurrency);
     }
@@ -296,13 +290,7 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
         }
         IERC20 erc20Token = IERC20(optionsToken);
         erc20Token.transfer(buyer,amount);
-        if (settlementCurrency == address(0)){
-            seller.transfer(optionsPay);
-            
-        }else{
-            IERC20 settlement = IERC20(settlementCurrency);
-            settlement.transfer(seller,optionsPay);           
-        }
+        _transferPayback(seller,settlementCurrency,optionsPay);
         optionsPay = optionsPay.add(transFee);
         currencyAmount = currencyAmount.sub(optionsPay);
         _addTransactionFee(settlementCurrency,transFee);
@@ -384,12 +372,7 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
     if (payOrder.settlementsAmount > 0) {
             uint256 payAmount = payOrder.settlementsAmount;
             payOrder.settlementsAmount = 0;
-            if (settlementCurrency == address(0)) {
-                payOrder.owner.transfer(payAmount);                
-            }else {
-                IERC20 settlement = IERC20(settlementCurrency);
-                settlement.transfer(payOrder.owner,payAmount);           
-            }   
+            _transferPayback(payOrder.owner,settlementCurrency,payAmount); 
         }
     }
     function isEligibleOptionsToken(address optionsToken) public view returns(bool) {

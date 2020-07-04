@@ -837,7 +837,7 @@
   },
   "networks": {},
   "schemaVersion": "3.1.0",
-  "updatedAt": "2020-07-02T06:06:02.581Z",
+  "updatedAt": "2020-07-04T15:17:54.712Z",
   "devdoc": {
     "methods": {
       "getPrice(address)": {

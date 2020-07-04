@@ -9,6 +9,7 @@ contract TransactionFee is AddressWhiteList {
     using SafeMath for uint256;
     /* represents floting point numbers, where number = value * 10 ** exponent
     i.e 0.1 = 10 * 10 ** -2 */
+    event Transferback(address indexed collateral,address indexed recipient,uint256 payback);
     struct Number {
         uint256 value;
         int32 exponent;
@@ -66,6 +67,25 @@ contract TransactionFee is AddressWhiteList {
                     collateralToken.transfer(msg.sender,fee);
                 }
             }
+        }
+    }
+        /**
+      * @dev  transfer collateral payback amount;
+      * @param recieptor payback recieptor
+      * @param collateral collateral address
+      * @param payback amount of collateral will payback 
+      */
+    function _transferPayback(address recieptor,address collateral,uint256 payback)internal{
+        if (payback == 0){
+            return;
+        }
+        if (collateral == address(0)){
+            recieptor.transfer(payback);
+            emit Transferback(collateral,recieptor,payback);
+        }else{
+            IERC20 collateralToken = IERC20(collateral);
+            collateralToken.transfer(recieptor,payback);
+            emit Transferback(collateral,recieptor,payback);
         }
     }
     function _addTransactionFee(address settleMent,uint256 amount) internal {
