@@ -33,8 +33,10 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
 
     event AddPayOrder(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 amount, uint256 settlementsAmount);
     event AddSellOrder(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 amount);
-    event SellOptionsToken(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 optionsPrice,uint256 amount);
-    event BuyOptionsToken(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 optionsPrice,uint256 amount);
+    event SellOptionsToken(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 optionsPrice,uint256 amount,uint256 payback);
+    event BuyOptionsToken(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 optionsPrice,uint256 amount,uint256 totalPay);
+    event OrderSellerPayback(address indexed optionsToken,address indexed seller,address indexed settlementCurrency,uint256 payback);
+    event OrderBuyerPayback(address indexed optionsToken,address indexed buyer,uint256 amount);
     event ReturnExpiredOrders(address indexed optionsToken);
     event RedeemPayOrder(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 amount);
     event RedeemSellOrder(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 amount);
@@ -145,17 +147,28 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
         PayOptionsOrder[] storage orderList = payOrderMap[settlementCurrency][optionsToken];
         for (uint256 i=0;i<orderList.length;i++){
             if (orderList[i].owner == msg.sender){
-                _returnPayOrders(orderList[i],settlementCurrency);
-                emit RedeemPayOrder(msg.sender,optionsToken,settlementCurrency,orderList[i].amount);
-                for (uint256 j=i+1;j<orderList.length;j++) {
-                    orderList[i].owner = orderList[j].owner;
-                    orderList[i].createdTime = orderList[j].createdTime;
-                    orderList[i].amount = orderList[j].amount;
-                    orderList[i].settlementsAmount = orderList[j].settlementsAmount;
-                    i++;
-                }
-                orderList.length--;
+                _redeemBuyOrder(optionsToken,settlementCurrency,orderList,i);
                 break;
+            }
+        }
+    }
+        /**
+      * @dev redeem a pay order.redeem the earliest pay order.return back the deposition.
+      * @param optionsToken options token address
+      * @param settlementCurrency the settlement currency address
+      */    
+    function redeemInvalidPayOrder(address optionsToken,address settlementCurrency)nonReentrant public{
+        require(isEligibleAddress(settlementCurrency),"This settlements currency is ineligible");
+        require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
+        uint256 tokenPrice = _oracle.getSellOptionsPrice(optionsToken);
+        uint256 currencyPrice = _oracle.getPrice(settlementCurrency);
+        PayOptionsOrder[] storage orderList = payOrderMap[settlementCurrency][optionsToken];
+        for (uint256 i=0;i<orderList.length;i++){
+            if (orderList[i].owner == msg.sender){
+                if (!_isSufficientSettlements(orderList[i],tokenPrice,currencyPrice)){
+                    _redeemBuyOrder(optionsToken,settlementCurrency,orderList,i);
+                    i--;
+                }
             }
         }
 
@@ -205,27 +218,30 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
         }else{
             settlement.transferFrom(msg.sender,address(this),currencyAmount);      
         }
-        (uint256 allPay,uint256 transFee) = _calPayment(amount,tokenPrice,currencyPrice);
-        require(allPay.add(transFee)<=currencyAmount,"pay value is insufficient!");
-        uint256 _totalBuy = 0;
+        uint256 totalSetterment = currencyAmount;
+        (uint256 allSell,uint256 transFee) = _calPayment(amount,tokenPrice,currencyPrice);
+        require(allSell.add(transFee)<=currencyAmount,"pay value is insufficient!");
+        allSell = 0;//all sell amount
         SellOptionsOrder[] storage orderList = sellOrderMap[settlementCurrency][optionsToken];
         for (uint256 i=0;i<orderList.length;i++) {
             uint256 optionsAmount = amount;
             if (amount > orderList[i].amount) {
                 optionsAmount = orderList[i].amount;
             }
-            amount = amount.sub(optionsAmount);
-            _totalBuy = _totalBuy.add(optionsAmount);
             uint256 sellAmount = 0;
             (sellAmount,currencyAmount) = _orderTrading(optionsToken,optionsAmount,tokenPrice,settlementCurrency,currencyAmount,currencyPrice,
-            orderList[i].owner,msg.sender);
+                        orderList[i].owner,msg.sender);
+            amount = amount.sub(sellAmount);
+            allSell = allSell.add(sellAmount);
+
             orderList[i].amount = orderList[i].amount.sub(sellAmount);
             if (amount == 0) {
                 break;
             }
         }
         _transferPayback(msg.sender,settlementCurrency,currencyAmount);
-        emit BuyOptionsToken(msg.sender,optionsToken,settlementCurrency,tokenPrice,_totalBuy);
+        totalSetterment = totalSetterment.sub(currencyAmount);
+        emit BuyOptionsToken(msg.sender,optionsToken,settlementCurrency,tokenPrice,allSell,totalSetterment);
         _removeEmptySellOrder(optionsToken,settlementCurrency);
     }
     /**
@@ -238,6 +254,7 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
         uint256 tokenPrice = _oracle.getSellOptionsPrice(optionsToken);
         uint256 currencyPrice = _oracle.getPrice(settlementCurrency);
         uint256 _totalSell = 0;
+        uint256 _totalPayback = 0;
         IERC20 erc20Token = IERC20(optionsToken);
         erc20Token.transferFrom(msg.sender,address(this),amount);
         PayOptionsOrder[] storage orderList = payOrderMap[settlementCurrency][optionsToken];
@@ -249,12 +266,12 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
             if (optionsAmount > orderList[i].amount) {
                 optionsAmount = orderList[i].amount;
             }
-
-            amount = amount.sub(optionsAmount);            
             (uint256 sellAmount,uint256 leftCurrency) = _orderTrading(optionsToken,optionsAmount,tokenPrice,settlementCurrency,orderList[i].settlementsAmount,currencyPrice,
             msg.sender,orderList[i].owner);
             _totalSell = _totalSell.add(sellAmount);
+            amount = amount.sub(sellAmount);  
             orderList[i].amount = orderList[i].amount.sub(sellAmount);
+            _totalPayback = _totalPayback.add(orderList[i].settlementsAmount.sub(leftCurrency));
             orderList[i].settlementsAmount = leftCurrency;
             if (amount == 0) {
                 break;
@@ -263,7 +280,7 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
         if (amount > 0){
             erc20Token.transfer(msg.sender,amount);
         }
-        emit SellOptionsToken(msg.sender,optionsToken,settlementCurrency,tokenPrice,_totalSell);
+        emit SellOptionsToken(msg.sender,optionsToken,settlementCurrency,tokenPrice,_totalSell,_totalPayback);
         _removeEmptyPayOrder(optionsToken,settlementCurrency);
     }
     /**
@@ -281,6 +298,18 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
             }
         }
     }
+    function _redeemBuyOrder(address optionToken,address settlementCurrency,PayOptionsOrder[] storage orderList,uint256 i) private {
+        _returnPayOrders(orderList[i],settlementCurrency);
+        emit RedeemPayOrder(msg.sender,optionToken,settlementCurrency,orderList[i].amount);
+        for (uint256 j=i+1;j<orderList.length;j++) {
+            orderList[i].owner = orderList[j].owner;
+            orderList[i].createdTime = orderList[j].createdTime;
+            orderList[i].amount = orderList[j].amount;
+            orderList[i].settlementsAmount = orderList[j].settlementsAmount;
+            i++;
+        }
+        orderList.length--;
+    }
     function _orderTrading(address optionsToken,uint256 amount,uint256 optionsPrice,
             address settlementCurrency,uint256 currencyAmount,uint256 currencyPrice,
             address seller,address buyer) internal returns (uint256,uint256) {
@@ -290,10 +319,12 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
         }
         IERC20 erc20Token = IERC20(optionsToken);
         erc20Token.transfer(buyer,amount);
-        _transferPayback(seller,settlementCurrency,optionsPay);
+        _transferPayback(seller,settlementCurrency,optionsPay); 
+        emit OrderSellerPayback(optionsToken,seller,settlementCurrency,optionsPay);
         optionsPay = optionsPay.add(transFee);
         currencyAmount = currencyAmount.sub(optionsPay);
         _addTransactionFee(settlementCurrency,transFee);
+        emit OrderBuyerPayback(optionsToken,buyer,amount);
         return (amount,currencyAmount);
     }
     function _removeEmptyPayOrder(address optionsToken,address settlementCurrency)internal{

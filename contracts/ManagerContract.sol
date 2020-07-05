@@ -154,10 +154,10 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
     
     event CreateOptions(address indexed collateral,address indexed tokenAddress, uint32 indexed underlyingAssets,uint256 strikePrice,uint256 expiration,uint8 optType);
     event AddCollateral(address indexed optionsToken,uint256 indexed amount,uint256 mintOptionsTokenAmount);
-    event WithdrawCollateral(address indexed optionsToken,uint256 amount);
+    event WithdrawCollateral(address indexed Sender,address indexed optionsToken,uint256 amount);
     event Exercise(address indexed Sender,address indexed optionsToken,uint256 unitPrice);
-    event Transferback(address indexed collateral,address indexed recipient,uint256 payback);
-    event Liquidate(address indexed Sender,address indexed optionsToken,address indexed writer,uint256 amount);
+    event ExercisePayback(address indexed optionsToken,address indexed recieptor,address indexed collateral,uint256 payback);
+    event Liquidate(address indexed Sender,address indexed optionsToken,address indexed writer,uint256 amount,uint256 payback);
     event BurnOptionsToken(address indexed optionsToken,address indexed writer,uint256 amount);
     //*******************getter***********************
     function getOracleAddress() public view returns(address){
@@ -229,7 +229,7 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
         writerVaults[collateral][msg.sender] = writerVaults[collateral][msg.sender].sub(amount);
         require (_isSufficientCollateral(collateral,msg.sender,address(0),0,0),"option token writter's Collateral is insufficient");
         _transferPayback(msg.sender,collateral,amount);
-        emit WithdrawCollateral(collateral,amount);
+        emit WithdrawCollateral(msg.sender,collateral,amount);
 
     }
     /**
@@ -274,7 +274,7 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
         _transferPayback(msg.sender,optionsItem.options.collateralCurrency,_payback.sub(_transFee));
         IIterableToken itoken = IIterableToken(optionsToken);
         itoken.burn(amount);
-        emit Liquidate(msg.sender,optionsToken,writer,amount);
+        emit Liquidate(msg.sender,optionsToken,writer,amount,_payback.sub(_transFee));
     }
     /**
       * @dev  A options writer burn some of his own token;
@@ -325,7 +325,7 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
                         if (writerOptions[tokenAddress][accounts[i]] == 0){ //not writer
                             value = balances[i].mul(tokenPayback).div(_calDecimal);
                             accounts[i].transfer(value);
-                            emit Transferback(optionsItem.options.collateralCurrency,accounts[i],value);
+                            emit ExercisePayback(tokenAddress,accounts[i],optionsItem.options.collateralCurrency,value);
                         }
                     }
                 }
@@ -335,7 +335,7 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
                         if (writerOptions[tokenAddress][accounts[i]] == 0){ //not writer
                             value = balances[i].mul(tokenPayback).div(_calDecimal);
                             collateralToken.transfer(accounts[i],value);
-                            emit Transferback(optionsItem.options.collateralCurrency,accounts[i],value);
+                            emit ExercisePayback(tokenAddress,accounts[i],optionsItem.options.collateralCurrency,value);
                         }
                     }
                 }
@@ -343,25 +343,6 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
         }
         _remove(tokenAddress);
         emit Exercise(msg.sender,tokenAddress,tokenPayback);
-    }
-    /**
-      * @dev  transfer collateral payback amount;
-      * @param recieptor payback recieptor
-      * @param collateral collateral address
-      * @param payback amount of collateral will payback 
-      */
-    function _transferPayback(address recieptor,address collateral,uint256 payback)internal{
-        if (payback == 0){
-            return;
-        }
-        if (collateral == address(0)){
-            recieptor.transfer(payback);
-            emit Transferback(collateral,recieptor,payback);
-        }else{
-            IERC20 collateralToken = IERC20(collateral);
-            collateralToken.transfer(recieptor,payback);
-            emit Transferback(collateral,recieptor,payback);
-        }
     }
     /**
       * @dev  calculate an options token exercise payback and each writer's payment;
