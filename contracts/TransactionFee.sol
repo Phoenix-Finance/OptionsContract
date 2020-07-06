@@ -13,6 +13,7 @@ contract TransactionFee is AddressWhiteList {
         uint256 value;
         int32 exponent;
     }
+    event TransferPayback(address indexed recieptor,address indexed collateral,uint256 payback);
     // The total fees accumulated in the contract
     mapping (address => uint256) 	public managerFee;
     // Number(3,-3) = 0.3%
@@ -84,6 +85,7 @@ contract TransactionFee is AddressWhiteList {
             IERC20 collateralToken = IERC20(collateral);
             collateralToken.transfer(recieptor,payback);
         }
+        emit TransferPayback(recieptor,collateral,payback);
     }
     function _addTransactionFee(address settleMent,uint256 amount) internal {
         managerFee[settleMent] = managerFee[settleMent].add(amount);

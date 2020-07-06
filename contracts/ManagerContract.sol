@@ -154,7 +154,7 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
     
     event CreateOptions(address indexed collateral,address indexed tokenAddress, uint32 indexed underlyingAssets,uint256 strikePrice,uint256 expiration,uint8 optType);
     event AddCollateral(address indexed optionsToken,uint256 indexed amount,uint256 mintOptionsTokenAmount);
-    event WithdrawCollateral(address indexed Sender,address indexed optionsToken,uint256 amount);
+    event WithdrawCollateral(address indexed Sender,address indexed collateral,uint256 amount);
     event Exercise(address indexed Sender,address indexed optionsToken,uint256 unitPrice);
     event ExercisePayback(address indexed optionsToken,address indexed recieptor,address indexed collateral,uint256 payback);
     event Liquidate(address indexed Sender,address indexed optionsToken,address indexed writer,uint256 amount,uint256 payback);

@@ -38,7 +38,7 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
     event OrderSellerPayback(address indexed optionsToken,address indexed seller,address indexed settlementCurrency,uint256 payback);
     event OrderBuyerPayback(address indexed optionsToken,address indexed buyer,uint256 amount);
     event ReturnExpiredOrders(address indexed optionsToken);
-    event RedeemPayOrder(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 amount);
+    event RedeemPayOrder(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 amount, uint256 settlementsAmount);
     event RedeemSellOrder(address indexed from,address indexed optionsToken,address indexed settlementCurrency,uint256 amount);
     //*******************getter***********************
     function getOracleAddress() public view returns(address){
@@ -153,7 +153,7 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
         }
     }
         /**
-      * @dev redeem a pay order.redeem the earliest pay order.return back the deposition.
+      * @dev redeem all invalid pay order.redeem all insufficient pay orders.return back the deposition.
       * @param optionsToken options token address
       * @param settlementCurrency the settlement currency address
       */    
@@ -300,7 +300,7 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
     }
     function _redeemBuyOrder(address optionToken,address settlementCurrency,PayOptionsOrder[] storage orderList,uint256 i) private {
         _returnPayOrders(orderList[i],settlementCurrency);
-        emit RedeemPayOrder(msg.sender,optionToken,settlementCurrency,orderList[i].amount);
+        emit RedeemPayOrder(msg.sender,optionToken,settlementCurrency,orderList[i].amount,orderList[i].settlementsAmount);
         for (uint256 j=i+1;j<orderList.length;j++) {
             orderList[i].owner = orderList[j].owner;
             orderList[i].createdTime = orderList[j].createdTime;
