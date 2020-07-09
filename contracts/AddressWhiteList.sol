@@ -1,9 +1,9 @@
 pragma solidity ^0.4.26;
-import "./Ownable.sol";
+import "./Halt.sol";
     /**
      * @dev Implementation of a whitelist filters a eligible address.
      */
-contract AddressWhiteList is Ownable {
+contract AddressWhiteList is Halt {
 
     // The eligible adress list
     address[] public whiteList;

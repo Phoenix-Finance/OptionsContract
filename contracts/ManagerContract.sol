@@ -1,7 +1,6 @@
 pragma solidity ^0.4.26;
 import "./SafeMath.sol";
 import "./IERC20.sol";
-import "./Ownable.sol";
 import "./ReentrancyGuard.sol";
 import "./OptionsToken.sol";
 import "./CompoundOracleInterface.sol";
@@ -195,7 +194,7 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
     uint256 strikePrice,
     uint256 expiration,
     uint8 optType)
-    public onlyOwner nonReentrant{
+    public onlyOwner notHalted nonReentrant{
         require(underlyingAssets>0 , "underlying cannot be zero");
         require(isEligibleAddress(collateral) , "collateral is unsupported token");
 //        expiration = expiration.add(now);
@@ -212,7 +211,8 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
         * @param amount The amount of collateral asset
         * @param mintOptionsTokenAmount The amount of options token will be minted and sent to the writer;
         */   
-    function addCollateral(address optionsToken,address collateral,uint256 amount,uint256 mintOptionsTokenAmount)public payable nonReentrant{
+    function addCollateral(address optionsToken,address collateral,uint256 amount,uint256 mintOptionsTokenAmount)
+        public payable nonReentrant notHalted{
         require(_contains(optionsToken),"This OptionsToken does not exist");
         require(!_isExpired(optionsMap[optionsToken]), "This OptionsToken expired");
         require(optionsMap[optionsToken].options.collateralCurrency == collateral,"Collateral currency type error");
@@ -224,7 +224,8 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
         * @param collateral The collateral address.
         * @param amount The amount  collateral asset which will be Withdrawn
         */   
-    function withdrawCollateral(address collateral,uint256 amount)public nonReentrant{
+    function withdrawCollateral(address collateral,uint256 amount)
+        public nonReentrant notHalted{
         require(isEligibleAddress(collateral) , "collateral is unsupported token");
         writerVaults[collateral][msg.sender] = writerVaults[collateral][msg.sender].sub(amount);
         require (_isSufficientCollateral(collateral,msg.sender,address(0),0,0),"option token writter's Collateral is insufficient");
@@ -235,7 +236,7 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
     /**
       * @dev  exercise all of the expired options token;
       */  
-    function exercise()public nonReentrant{
+    function exercise()public nonReentrant notHalted{
         for (uint keyIndex = _iterate_start();_iterate_valid(keyIndex);keyIndex = _iterate_next(keyIndex)){
             IndexValue storage optionsItem = optionsMap[optionsTokenList[keyIndex].key];
             _exercise(optionsTokenList[keyIndex].key,optionsItem);
@@ -247,7 +248,7 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
       * @param writer The Options writer address.
       * @param amount The amount  of optionsToken which will be liquidated
       */  
-    function liquidate(address optionsToken,address writer,uint256 amount)public nonReentrant{
+    function liquidate(address optionsToken,address writer,uint256 amount)public nonReentrant notHalted{
         require(_contains(optionsToken),"This OptionsToken does not exist");
         IndexValue storage optionsItem = optionsMap[optionsToken];
         require(!_isExpired(optionsItem), "OptionsToken expired");
@@ -281,7 +282,7 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
       * @param optionsToken The Options token address.
       * @param amount The amount of options token which will be burned
       */     
-    function burnOptionsToken(address optionsToken,uint256 amount)public nonReentrant{
+    function burnOptionsToken(address optionsToken,uint256 amount)public nonReentrant notHalted{
        require(_contains(optionsToken),"This OptionsToken does not exist");
         IndexValue storage optionsItem = optionsMap[optionsToken];
         require(!_isExpired(optionsItem), "OptionsToken expired");

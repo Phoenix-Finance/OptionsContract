@@ -105,7 +105,8 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
       * @param deposit you need to deposit some settlement currency to pay the order.deposit is the amount of settlement currency to pay.
       * @param buyAmount the options token amount you want to buy.
       */
-    function addPayOrder(address optionsToken,address settlementCurrency,uint256 deposit,uint256 buyAmount) nonReentrant public payable{
+    function addPayOrder(address optionsToken,address settlementCurrency,uint256 deposit,uint256 buyAmount)
+         nonReentrant notHalted public payable{
         require(isEligibleAddress(settlementCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         uint256 tokenPrice = _oracle.getSellOptionsPrice(optionsToken);
@@ -128,7 +129,8 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
       * @param settlementCurrency the settlement currency address
       * @param amount the options token amount you want to sell.
       */
-    function addSellOrder(address optionsToken,address settlementCurrency,uint256 amount)nonReentrant public {
+    function addSellOrder(address optionsToken,address settlementCurrency,uint256 amount)
+        nonReentrant notHalted public {
         require(isEligibleAddress(settlementCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         IERC20 ERC20Token = IERC20(optionsToken);
@@ -141,7 +143,8 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
       * @param optionsToken options token address
       * @param settlementCurrency the settlement currency address
       */    
-    function redeemPayOrder(address optionsToken,address settlementCurrency)nonReentrant public{
+    function redeemPayOrder(address optionsToken,address settlementCurrency)
+        nonReentrant notHalted public{
         require(isEligibleAddress(settlementCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         PayOptionsOrder[] storage orderList = payOrderMap[settlementCurrency][optionsToken];
@@ -157,7 +160,8 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
       * @param optionsToken options token address
       * @param settlementCurrency the settlement currency address
       */    
-    function redeemInvalidPayOrder(address optionsToken,address settlementCurrency)nonReentrant public{
+    function redeemInvalidPayOrder(address optionsToken,address settlementCurrency)
+        nonReentrant notHalted public{
         require(isEligibleAddress(settlementCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         uint256 tokenPrice = _oracle.getSellOptionsPrice(optionsToken);
@@ -178,7 +182,8 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
       * @param optionsToken options token address
       * @param settlementCurrency the settlement currency address
       */    
-    function redeemSellOrder(address optionsToken,address settlementCurrency)nonReentrant public {
+    function redeemSellOrder(address optionsToken,address settlementCurrency)
+        nonReentrant notHalted public {
         require(isEligibleAddress(settlementCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         SellOptionsOrder[] storage orderList = sellOrderMap[settlementCurrency][optionsToken];
@@ -209,7 +214,8 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
       * @param settlementCurrency the settlement currency address
       * @param currencyAmount the settlement currency amount will be payed for
       */     
-    function buyOptionsToken(address optionsToken,uint256 amount,address settlementCurrency,uint256 currencyAmount)nonReentrant public payable {
+    function buyOptionsToken(address optionsToken,uint256 amount,address settlementCurrency,uint256 currencyAmount)
+        nonReentrant notHalted public payable {
         uint256 tokenPrice = _oracle.getBuyOptionsPrice(optionsToken);
         uint256 currencyPrice = _oracle.getPrice(settlementCurrency);
         IERC20 settlement = IERC20(settlementCurrency);
@@ -250,7 +256,8 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
       * @param amount options token amount you want to sell
       * @param settlementCurrency the settlement currency address
       */      
-    function sellOptionsToken(address optionsToken,uint256 amount,address settlementCurrency)nonReentrant public {
+    function sellOptionsToken(address optionsToken,uint256 amount,address settlementCurrency)
+        nonReentrant notHalted public {
         uint256 tokenPrice = _oracle.getSellOptionsPrice(optionsToken);
         uint256 currencyPrice = _oracle.getPrice(settlementCurrency);
         uint256 _totalSell = 0;
@@ -286,7 +293,8 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
     /**
       * @dev return back the expired options token orders. Both buy orders and sell orders
       */        
-    function returnExpiredOrders()nonReentrant public{
+    function returnExpiredOrders()
+        nonReentrant notHalted public{
         address[] memory options = _optionsManager.getOptionsTokenList();
         for (uint256 i=0;i<options.length;i++){
             if (!isEligibleOptionsToken(options[i])){
