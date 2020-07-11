@@ -6,6 +6,11 @@ import "./IERC20.sol";
      * @dev Implementation of a transaction fee manager.
      */
 contract TransactionFee is AddressWhiteList {
+    modifier nonContract() {                // contracts pls go
+        require(tx.origin == msg.sender);
+        _;
+    }
+
     using SafeMath for uint256;
     /* represents floting point numbers, where number = value * 10 ** exponent
     i.e 0.1 = 10 * 10 ** -2 */

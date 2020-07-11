@@ -149,7 +149,7 @@ contract Managerable is Expration {
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract OptionsToken is Managerable, IERC20,BalanceMapping  {
+contract OptionsToken is Managerable, IERC20,BalanceMapping {
     using SafeMath for uint256;
     string public name = "OptionsToken";
     string public symbol = "OptionsToken";
@@ -166,6 +166,14 @@ contract OptionsToken is Managerable, IERC20,BalanceMapping  {
         setManager(msg.sender);
         name = tokenName;
     }
+
+    function isContract(address addr) private view returns (bool) {
+		uint len;
+		assembly {
+			len := extcodesize(addr)
+		}
+		return (len > 0);
+	}
     /**
      * @dev See {IERC20-totalSupply}.
      */

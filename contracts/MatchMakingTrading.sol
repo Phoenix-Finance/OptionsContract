@@ -106,7 +106,7 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
       * @param buyAmount the options token amount you want to buy.
       */
     function addPayOrder(address optionsToken,address settlementCurrency,uint256 deposit,uint256 buyAmount)
-         nonReentrant notHalted public payable{
+         nonReentrant notHalted nonContract public payable{
         require(isEligibleAddress(settlementCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         uint256 tokenPrice = _oracle.getSellOptionsPrice(optionsToken);
@@ -130,7 +130,7 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
       * @param amount the options token amount you want to sell.
       */
     function addSellOrder(address optionsToken,address settlementCurrency,uint256 amount)
-        nonReentrant notHalted public {
+        nonReentrant notHalted nonContract public {
         require(isEligibleAddress(settlementCurrency),"This settlements currency is ineligible");
         require(isEligibleOptionsToken(optionsToken),"This options token is ineligible");
         IERC20 ERC20Token = IERC20(optionsToken);
@@ -215,7 +215,7 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
       * @param currencyAmount the settlement currency amount will be payed for
       */     
     function buyOptionsToken(address optionsToken,uint256 amount,address settlementCurrency,uint256 currencyAmount)
-        nonReentrant notHalted public payable {
+        nonReentrant notHalted nonContract public payable {
         uint256 tokenPrice = _oracle.getBuyOptionsPrice(optionsToken);
         uint256 currencyPrice = _oracle.getPrice(settlementCurrency);
         IERC20 settlement = IERC20(settlementCurrency);
@@ -257,7 +257,7 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
       * @param settlementCurrency the settlement currency address
       */      
     function sellOptionsToken(address optionsToken,uint256 amount,address settlementCurrency)
-        nonReentrant notHalted public {
+        nonReentrant notHalted nonContract public {
         uint256 tokenPrice = _oracle.getSellOptionsPrice(optionsToken);
         uint256 currencyPrice = _oracle.getPrice(settlementCurrency);
         uint256 _totalSell = 0;
