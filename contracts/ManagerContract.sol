@@ -240,6 +240,9 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
         for (uint keyIndex = _iterate_start();_iterate_valid(keyIndex);keyIndex = _iterate_next(keyIndex)){
             IndexValue storage optionsItem = optionsMap[optionsTokenList[keyIndex].key];
             _exercise(optionsTokenList[keyIndex].key,optionsItem);
+            if (gasleft()<2000000){
+                break;
+            }
         }
     }
     /**
@@ -393,7 +396,7 @@ contract OptionsManager is OptionsVault,ReentrancyGuard {
         if (_payback >writerVaults[collateral][writer]) {
             _payback = writerVaults[collateral][writer];
         }
-        uint leftToken = writerOptions[tokenAddress][writer] - ercToken.balanceOf(writer);
+        uint leftToken = writerOptions[tokenAddress][writer].sub(ercToken.balanceOf(writer));
         _payback = _payback.mul(leftToken).div(writerOptions[tokenAddress][writer]);
         uint256 _transFee =_calNumberMulUint(transactionFee,_payback);
         

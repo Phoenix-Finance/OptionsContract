@@ -168,6 +168,9 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
         uint256 currencyPrice = _oracle.getPrice(settlementCurrency);
         PayOptionsOrder[] storage orderList = payOrderMap[settlementCurrency][optionsToken];
         for (uint256 i=0;i<orderList.length;i++){
+            if (!gasSufficient()){
+                return;
+            }
             if (orderList[i].owner == msg.sender){
                 if (!_isSufficientSettlements(orderList[i],tokenPrice,currencyPrice)){
                     _redeemBuyOrder(optionsToken,settlementCurrency,orderList,i);
@@ -299,12 +302,21 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
         for (uint256 i=0;i<options.length;i++){
             if (!isEligibleOptionsToken(options[i])){
                 for (uint j=0;j<whiteList.length;j++){
+                    if (!gasSufficient()) {
+                        return;
+                    }
                     _returnExpiredSellOrders(options[i],whiteList[j]);
+                    if (!gasSufficient()) {
+                        return;
+                    }
                     _returnExpiredPayOrders(options[i],whiteList[j]);
                 }
                 emit ReturnExpiredOrders(options[i]);
             }
         }
+    }
+    function gasSufficient()internal returns(bool){
+        return gasleft()>1000000;
     }
     function _redeemBuyOrder(address optionToken,address settlementCurrency,PayOptionsOrder[] storage orderList,uint256 i) private {
         _returnPayOrders(orderList[i],settlementCurrency);
@@ -339,6 +351,9 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
         PayOptionsOrder[] storage orderList = payOrderMap[settlementCurrency][optionsToken];
         uint256 index = 0;
         for (uint i=0;i<orderList.length;i++) {
+            if (!gasSufficient()){
+                return;
+            }
             if (orderList[i].amount > 0) {
                 if(i != index) {
                     orderList[index].owner = orderList[i].owner;
@@ -392,6 +407,9 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
         IERC20 options = IERC20(optionsToken);
         SellOptionsOrder[] storage orderList = sellOrderMap[settlementCurrency][optionsToken];
         for (uint i=0;i<orderList.length;i++) {
+               if (!gasSufficient()){
+                    return;
+                }
             if (orderList[i].amount > 0) {
                 uint256 tokenAmount = orderList[i].amount;
                 orderList[i].amount = 0;
@@ -403,6 +421,9 @@ contract MatchMakingTrading is TransactionFee,ReentrancyGuard {
     function _returnExpiredPayOrders(address optionsToken,address settlementCurrency) internal{
         PayOptionsOrder[] storage orderList = payOrderMap[settlementCurrency][optionsToken];
         for (uint i=0;i<orderList.length;i++) {
+                if (!gasSufficient()) {
+                   return;
+                }
             _returnPayOrders(orderList[i],settlementCurrency);
         }
         delete payOrderMap[settlementCurrency][optionsToken];
